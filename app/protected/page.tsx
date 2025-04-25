@@ -1,33 +1,99 @@
-import { createClient } from "@/utils/supabase/server";
-import { InfoIcon } from "lucide-react";
-import { redirect } from "next/navigation";
+"use client";
 
-export default async function ProtectedPage() {
-  const supabase = await createClient();
+import { createClient } from "@/utils/supabase/client";
+import { useEffect, useState } from "react";
+import { User } from "@supabase/supabase-js";
+import { useRouter } from "next/navigation";
+import { submitUrl } from "@/app/actions";
+import { useFormStatus } from "react-dom";
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+function SubmitButton() {
+  const { pending } = useFormStatus();
+  
+  return (
+    <button
+      type="submit"
+      disabled={pending}
+      className="w-full p-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-blue-400"
+    >
+      {pending ? "Submitting..." : "Submit"}
+    </button>
+  );
+}
 
-  if (!user) {
-    return redirect("/sign-in");
+export default function ProtectedPage() {
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [message, setMessage] = useState<{type: 'success' | 'error', text: string} | null>(null);
+  const router = useRouter();
+
+  useEffect(() => {
+    async function getUser() {
+      const supabase = createClient();
+      const { data } = await supabase.auth.getUser();
+      
+      if (!data.user) {
+        router.push("/sign-in");
+        return;
+      }
+      
+      setUser(data.user);
+      setLoading(false);
+    }
+
+    getUser();
+  }, [router]);
+
+  async function handleFormAction(formData: FormData) {
+    try {
+      // Clear any previous messages
+      setMessage(null);
+      
+      // Call the server action
+      const result = await submitUrl(formData);
+      
+      if (result.success) {
+        setMessage({ type: 'success', text: result.message });
+        // Reset the form
+        const form = document.getElementById('urlForm') as HTMLFormElement;
+        if (form) form.reset();
+      } else {
+        setMessage({ type: 'error', text: result.message });
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      setMessage({ type: 'error', text: 'An unexpected error occurred' });
+    }
+  }
+
+  if (loading) {
+    return <div>Loading...</div>;
   }
 
   return (
-    <div className="flex-1 w-full flex flex-col gap-12">
-      <div className="w-full">
-        <div className="bg-accent text-sm p-3 px-5 rounded-md text-foreground flex gap-3 items-center">
-          <InfoIcon size="16" strokeWidth={2} />
-          This is a protected page that you can only see as an authenticated
-          user
+    <div className="flex flex-col items-center justify-center p-4">
+      {message && (
+        <div className={`mb-4 p-3 rounded ${message.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+          {message.text}
         </div>
-      </div>
-      <div className="flex flex-col gap-2 items-start">
-        <h2 className="font-bold text-2xl mb-4">Your user details</h2>
-        <pre className="text-xs font-mono p-3 rounded border max-h-32 overflow-auto">
-          {JSON.stringify(user, null, 2)}
-        </pre>
-      </div>
+      )}
+      
+      <form id="urlForm" action={handleFormAction} className="w-full max-w-md">
+        <div className="mb-4">
+          <label htmlFor="url" className="block text-sm font-medium mb-2">
+            Enter URL
+          </label>
+          <input
+            id="url"
+            name="url"
+            type="url"
+            className="w-full p-2 border border-zinc-300 dark:border-zinc-700 rounded dark:bg-zinc-800"
+            placeholder="https://example.com"
+            required
+          />
+        </div>
+        <SubmitButton />
+      </form>
     </div>
   );
 }

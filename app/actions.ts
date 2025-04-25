@@ -132,3 +132,19 @@ export const signOutAction = async () => {
   await supabase.auth.signOut();
   return redirect("/sign-in");
 };
+
+/**
+ * Server action to process a submitted URL
+ */
+export async function submitUrl(formData: FormData) {
+  const url = formData.get('url') as string;
+  
+  if (!url) {
+    return { success: false, message: 'URL is required' };
+  }
+  
+  // Log the URL
+  console.log('Received URL:', url);
+  
+  return { success: true, message: 'URL received' };
+}
