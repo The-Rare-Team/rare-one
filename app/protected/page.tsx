@@ -4,7 +4,7 @@ import { createClient } from "@/utils/supabase/client";
 import { useEffect, useState } from "react";
 import { User } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
-import { submitUrl, launchBrowser } from "@/app/actions";
+import { submitUrl, launchBrowser, startBrowserSession } from "@/app/actions";
 import { useFormStatus } from "react-dom";
 
 function SubmitButton() {
@@ -25,6 +25,7 @@ export default function ProtectedPage() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<{type: 'success' | 'error', text: string} | null>(null);
+  const [liveViewLink, setLiveViewLink] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -72,7 +73,10 @@ export default function ProtectedPage() {
       setMessage(null);
       
       // Call the server action
-      const result = await launchBrowser();
+      const { session,liveViewLink } = await startBrowserSession();
+      setLiveViewLink(liveViewLink);
+
+      const result = await launchBrowser(session.id, session.connectUrl);
       
       if (result.success) {
         setMessage({ type: 'success', text: result.message });
@@ -90,37 +94,58 @@ export default function ProtectedPage() {
   }
 
   return (
-    <div className="flex flex-col items-center justify-center p-4">
-      {message && (
-        <div className={`mb-4 p-3 rounded ${message.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-          {message.text}
-        </div>
-      )}
-      
-      <form id="urlForm" action={handleFormAction} className="w-full max-w-md">
-        <div className="mb-4">
-          <label htmlFor="url" className="block text-sm font-medium mb-2">
-            Enter URL
-          </label>
-          <input
-            id="url"
-            name="url"
-            type="url"
-            className="w-full p-2 border border-zinc-300 dark:border-zinc-700 rounded dark:bg-zinc-800"
-            placeholder="https://example.com"
-            required
-          />
-        </div>
-        <SubmitButton />
-      </form>
+    <div className="grid grid-cols-12 min-h-[90vh] w-full gap-6">
+      {/* Left column - Forms */}
+      <div className="col-span-4">
+        {message && (
+          <div className={`mb-4 p-3 rounded ${message.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+            {message.text}
+          </div>
+        )}
+        
+        <form id="urlForm" action={handleFormAction} className="w-full mb-6">
+          <div className="mb-4">
+            <label htmlFor="url" className="block text-sm font-medium mb-2">
+              Enter URL
+            </label>
+            <input
+              id="url"
+              name="url"
+              type="url"
+              className="w-full p-2 border border-zinc-300 dark:border-zinc-700 rounded dark:bg-zinc-800"
+              placeholder="https://example.com"
+              required
+            />
+          </div>
+          <SubmitButton />
+        </form>
 
-      <div className="w-full max-w-md mt-6">
-        <button
-          onClick={handleLaunchBrowser}
-          className="w-full p-2 bg-purple-600 text-white rounded hover:bg-purple-700"
-        >
-          Launch Browser
-        </button>
+        <div className="w-full">
+          <button
+            onClick={handleLaunchBrowser}
+            className="w-full p-2 bg-purple-600 text-white rounded hover:bg-purple-700"
+          >
+            Launch Browser
+          </button>
+        </div>
+      </div>
+
+      {/* Right column - Browser View */}
+      <div className="col-span-8">
+        {liveViewLink ? (
+          <iframe
+            src={liveViewLink}
+            sandbox="allow-same-origin allow-scripts"
+            allow="clipboard-read; clipboard-write"
+            style={{ pointerEvents: 'none', width: '100%', height: '100%', minHeight: '700px' }}
+            className="rounded-lg"
+          />
+        ) : (
+          <div className="text-center p-6">
+            <h3 className="text-lg font-medium">Browser View</h3>
+            <p className="text-zinc-500 dark:text-zinc-400">Live browser view will appear here after launching</p>
+          </div>
+        )}
       </div>
     </div>
   );
