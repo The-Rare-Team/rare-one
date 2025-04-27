@@ -1,5 +1,7 @@
 "use server";
 
+import { chromium } from "playwright-core";
+import Browserbase from "@browserbasehq/sdk";
 import { encodedRedirect } from "@/utils/utils";
 import { createClient } from "@/utils/supabase/server";
 import { headers } from "next/headers";
@@ -147,4 +149,43 @@ export async function submitUrl(formData: FormData) {
   console.log('Received URL:', url);
   
   return { success: true, message: 'URL received' };
+}
+
+/**
+ * Server action to launch a browser
+ */
+export async function launchBrowser() {
+  // This is just a placeholder
+  console.log('Browser launch requested');
+
+  await _launchBrowser();
+
+  return { 
+    success: true, 
+    message: 'Browser launch requested'
+  };
+}
+
+
+async function _launchBrowser() {
+  const bb = new Browserbase({ apiKey: process.env.BROWSERBASE_API_KEY });
+  const session = await bb.sessions.create({ projectId: process.env.BROWSERBASE_PROJECT_ID! });
+
+  const liveViewLinks = await bb.sessions.debug(session.id);
+  const liveViewLink = liveViewLinks.debuggerFullscreenUrl;
+  console.log(`🔍 Live View Link: ${liveViewLink}`);
+  await new Promise(resolve => setTimeout(resolve, 30000));
+
+  // Connect to the session
+  const browser = await chromium.connectOverCDP(session.connectUrl);
+
+  // Getting the default context to ensure the sessions are recorded.
+  const defaultContext = browser.contexts()[0];
+  const page = defaultContext.pages()[0];
+
+  await page.goto("https://news.ycombinator.com/");
+  await page.waitForTimeout(10000);
+  await page.close();
+  await browser.close();
+  console.log(`Session complete! View replay at https://browserbase.com/sessions/${session.id}`);
 }

@@ -4,7 +4,7 @@ import { createClient } from "@/utils/supabase/client";
 import { useEffect, useState } from "react";
 import { User } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
-import { submitUrl } from "@/app/actions";
+import { submitUrl, launchBrowser } from "@/app/actions";
 import { useFormStatus } from "react-dom";
 
 function SubmitButton() {
@@ -66,6 +66,25 @@ export default function ProtectedPage() {
     }
   }
 
+  async function handleLaunchBrowser() {
+    try {
+      // Clear any previous messages
+      setMessage(null);
+      
+      // Call the server action
+      const result = await launchBrowser();
+      
+      if (result.success) {
+        setMessage({ type: 'success', text: result.message });
+      } else {
+        setMessage({ type: 'error', text: result.message });
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      setMessage({ type: 'error', text: 'An unexpected error occurred' });
+    }
+  }
+
   if (loading) {
     return <div>Loading...</div>;
   }
@@ -94,6 +113,15 @@ export default function ProtectedPage() {
         </div>
         <SubmitButton />
       </form>
+
+      <div className="w-full max-w-md mt-6">
+        <button
+          onClick={handleLaunchBrowser}
+          className="w-full p-2 bg-purple-600 text-white rounded hover:bg-purple-700"
+        >
+          Launch Browser
+        </button>
+      </div>
     </div>
   );
 }
