@@ -145,10 +145,37 @@ export async function submitUrl(formData: FormData) {
     return { success: false, message: 'URL is required' };
   }
   
-  // Log the URL
-  console.log('Received URL:', url);
-  
-  return { success: true, message: 'URL received' };
+  try {
+    // Log the URL
+    console.log('Received URL for analysis:', url);
+    
+    // Call our API endpoint to analyze the URL
+    const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/analyze-url`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ url }),
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Failed to analyze URL: ${response.statusText}`);
+    }
+    
+    // For streaming responses, we return a success status
+    // The actual content will be handled by the client component
+    return { 
+      success: true, 
+      message: 'URL analysis initiated',
+      url: url, // Return the URL for reference on the client side
+    };
+  } catch (error) {
+    console.error('Error in submitUrl action:', error);
+    return { 
+      success: false, 
+      message: error instanceof Error ? error.message : 'Failed to process URL' 
+    };
+  }
 }
 
 /**
