@@ -87,12 +87,12 @@ export async function POST(req: Request) {
   let text, steps, toolCalls, toolResults, output;
   try {
     ({ text, steps, toolCalls, toolResults, experimental_output: output } = await generateText({
-      model: openai('gpt-4.1-nano'), // 'gpt-4o'
+      model: openai('gpt-4.1-mini'), // 'gpt-4o', 'gpt-4.1-nano' ,  'o1-mini-2024-09-12'
       system: systemPrompt,
       tools,
       messages: [{ role: 'user', content: userPrompt }],
       temperature: 0.1,
-      maxTokens: 1000,
+      maxTokens: 5000,
       maxSteps: 25,
       experimental_output: Output.object({ schema: urlSchema })
     }));
