@@ -20,17 +20,7 @@ export default function AnalyzePage() {
     setAnalysis('');
 
     try {
-      const formData = new FormData();
-      formData.append('url', url);
-
-      const result = await submitUrl(formData);
-
-      if (!result.success) {
-        throw new Error(result.message);
-      }
-
-      // Start streaming the analysis
-      await streamAnalysis(result.url || url);
+      await streamAnalysis(url);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred during analysis');
     } finally {
@@ -40,40 +30,20 @@ export default function AnalyzePage() {
 
   // Function to stream the analysis from the API
   const streamAnalysis = async (urlToAnalyze: string) => {
-    try {
-      const response = await fetch('/api/analyze-url', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ url: urlToAnalyze }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`API request failed with status: ${response.status}`);
-      }
-
-      // Read the stream
-      const reader = response.body?.getReader();
-      if (!reader) {
-        throw new Error('Response body is not available');
-      }
-
-      const decoder = new TextDecoder();
-      let done = false;
-
-      while (!done) {
-        const { done: streamDone, value } = await reader.read();
-        done = streamDone;
-
-        if (value) {
-          const text = decoder.decode(value, { stream: !done });
-          setAnalysis((prev) => prev + text);
-        }
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to stream analysis');
+    const response = await fetch('/api/analyze-url', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ url: urlToAnalyze }),
+    });
+    
+    if (!response.ok) {
+      throw new Error(`API request failed with status: ${response.status}`);
     }
+
+    const data = await response.json();
+    setAnalysis(data.text);
   };
 
   // Auto-scroll to bottom when new content arrives
