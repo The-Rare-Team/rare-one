@@ -28,7 +28,7 @@ export function TestsAddButton() {
     const {
         register,
         handleSubmit,
-        watch,
+        reset,
         formState: { errors },
     } = useForm<Inputs>()
 
@@ -36,10 +36,19 @@ export function TestsAddButton() {
 
     const onSubmit: SubmitHandler<Inputs> = async (data) => {
         console.log("submitting form data", data);
-        trigger(JSON.stringify(data)); // use SWR to submit and revaluate the data.
 
-        toast.success("Test created!");
-        setOpen(false);
+        try {
+            await trigger(JSON.stringify(data)); // use SWR to submit and revaluate the data.
+
+            toast.success("Test created!");
+            setOpen(false);
+            reset(); // reset the form fields
+
+        } catch (error) {
+            console.error("Error creating test:", error);
+            toast.error("Error creating test.");
+        }
+
     }
 
     return (

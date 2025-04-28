@@ -38,6 +38,6 @@ export const POST = async function POST(req: NextRequest) {
 
     console.log("POST data", data);
 
-    return NextResponse.json({ message: "OK" }, { status: 200 }); // TODO return the created test object + all test objects to optimistiacally update the list of tests on FE.
+    return NextResponse.json({ message: "ERROR" }, { status: 200 }); // TODO return the created test object + all test objects to optimistiacally update the list of tests on FE.
 
 };
