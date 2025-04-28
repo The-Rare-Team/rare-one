@@ -27,7 +27,7 @@ This project is scaffolded using [Next.js and Supabase Starter Kit](https://gith
 
 2. Use [nvm](https://github.com/nvm-sh/nvm) to install node latest LTS version of node.js.
 
-3. Rename `.env.example` to `.env.local` and update the following:
+3. Rename `.env.example` to `.env` and update the following:
 
    ```
    NEXT_PUBLIC_SUPABASE_URL=[INSERT SUPABASE PROJECT URL]
@@ -36,7 +36,17 @@ This project is scaffolded using [Next.js and Supabase Starter Kit](https://gith
 
    Both `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` can be found in [your Supabase project's API settings](https://app.supabase.com/project/_/settings/api)
 
-4. You can now run the Next.js local development server:
+4. (New Step!) Add the `DATABASE_URL` and `DIRECT_URL` connection strings from Supabase (Dashboard --> Database --> Connect --> ORM: Prisma) and don't forget to change the `[YOUR-PASSWORD]`! You must also use `.env` for your environment variables, not `.env.local`
+
+  ```
+  # Connect to Supabase via connection pooling
+  DATABASE_URL="postgresql://postgres.projectABC:[YOUR-PASSWORD]@aws-0-us-east-2.pooler.supabase.com:6543/postgres?pgbouncer=true"
+
+  # Direct connection to the database. Used for migrations
+  DIRECT_URL="postgresql://postgres.projectABC:[YOUR-PASSWORD]@aws-0-us-east-2.pooler.supabase.com:5432/postgres"
+  ```
+
+5. You can now run the Next.js local development server:
 
    ```bash
    npm run dev
