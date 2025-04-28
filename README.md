@@ -63,8 +63,12 @@ If want to run supabase locally, try
 
 # Prisma Instructions
 
+## Before First Run
+Generate prisma local files.
+`npx prisma generate`
+
 ## To Run Migrations Locally
 `npx prisma migrate dev`
 
 ## In Production
-Use `npm run build` it will include `npx prisma migrate deploy`.
+Use `npm run build` it will include `npx prisma migrate deploy` and `npx prisma generate`.
