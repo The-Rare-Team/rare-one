@@ -7,6 +7,7 @@ import { ThemeProvider } from "next-themes";
 import { Geist } from "next/font/google";
 import Image from "next/image";
 import Link from "next/link";
+import { ToastContainer } from "react-toastify";
 import "./globals.css";
 
 const defaultUrl = process.env.VERCEL_URL
@@ -54,7 +55,11 @@ export default function RootLayout({
               </nav>
               <div className="flex flex-col gap-20 max-w-5xl p-5 w-full">
                 {children}
+                <ToastContainer
+                  theme="colored" />
               </div>
+
+
 
               <footer className="w-full flex items-center justify-center border-t mx-auto text-center text-xs gap-8 py-16">
                 <p>
