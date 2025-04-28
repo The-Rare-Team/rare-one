@@ -20,8 +20,8 @@ export async function startSession(): Promise<BroswerSession> {
 
 export async function connectPlaywrightMCP(cdpEndpoint: string) {
   const transport = new Experimental_StdioMCPTransport({
-    command: "npx",
-    args: ["@playwright/mcp", "--cdp-endpoint", cdpEndpoint],
+    command: "node",
+    args: ["./node_modules/@playwright/mcp/cli.js", "--cdp-endpoint", cdpEndpoint],
   });
 
   const client = await experimental_createMCPClient({ transport });
