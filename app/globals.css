@@ -63,7 +63,50 @@
   * {
     @apply border-border;
   }
+
   body {
     @apply bg-background text-foreground;
   }
+}
+
+@keyframes indeterminate1 {
+  0% {
+    left: -35%;
+    width: 30%;
+  }
+
+  60% {
+    left: 100%;
+    width: 30%;
+  }
+
+  100% {
+    left: 100%;
+    width: 30%;
+  }
+}
+
+@keyframes indeterminate2 {
+  0% {
+    left: -200%;
+    width: 100%;
+  }
+
+  60% {
+    left: 107%;
+    width: 10%;
+  }
+
+  100% {
+    left: 107%;
+    width: 10%;
+  }
+}
+
+.animate-indeterminate1 {
+  animation: indeterminate1 6s infinite ease-in-out;
+}
+
+.animate-indeterminate2 {
+  animation: indeterminate2 6s infinite ease-in-out 3s;
 }

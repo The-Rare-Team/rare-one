@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import { submitter } from "@/utils/api"
 import { PlusIcon } from "@heroicons/react/24/solid"
 import React from "react"
@@ -18,7 +19,9 @@ import { toast } from "react-toastify"
 import useSWRMutation from 'swr/mutation'
 
 interface Inputs {
-    name: string
+    name: string,
+    url: string,
+    description?: string,
 }
 
 export function TestsAddButton() {
@@ -38,10 +41,10 @@ export function TestsAddButton() {
         console.log("submitting form data", data);
 
         try {
-            await trigger(JSON.stringify(data)); // use SWR to submit and revaluate the data.
+            await trigger(JSON.stringify(data));
 
             toast.success("Test created!");
-            setOpen(false);
+            setOpen(false); // close the dialog
             reset(); // reset the form fields
 
         } catch (error) {
@@ -56,7 +59,7 @@ export function TestsAddButton() {
             <DialogTrigger asChild>
                 <Button variant="default" className="bg-green-700 hover:bg-green-800"><PlusIcon className="size-5 inline mr-1" />Create New Test</Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]">
+            <DialogContent className="">
                 <form onSubmit={handleSubmit(onSubmit)}>
                     <DialogHeader>
                         <DialogTitle>New Test</DialogTitle>
@@ -69,7 +72,7 @@ export function TestsAddButton() {
                         <div className="grid grid-cols-4 items-center gap-x-4">
                             <div className="col-span-1 text-right">
                                 <Label htmlFor="name" className="text-right">
-                                    Test Name
+                                    Test Name<span className="text-red-500 pl-0.5">*</span>
                                 </Label>
                             </div>
                             <div className="col-span-3">
@@ -77,6 +80,40 @@ export function TestsAddButton() {
                             </div>
                             <div className="col-span-4 text-right">
                                 {errors.name && <p className="text-red-500 py-1 text-sm">{String(errors.name.message)}</p>}
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-4 items-center gap-x-4">
+                            <div className="col-span-1 text-right">
+                                <Label htmlFor="name" className="text-right">
+                                    Base URL<span className="text-red-500 pl-0.5">*</span>
+                                </Label>
+                            </div>
+                            <div className="col-span-3">
+                                <Input id="url" className="col-span-3" placeholder="https://google.com" {...register("url", {
+                                    required: "This field is required.",
+                                    pattern: {
+                                        value: /^(https?:\/\/)?([\w\d-]+\.){1,}[\w]{2,}(\/.*)?$/,
+                                        message: "Invalid URL format",
+                                    },
+                                })} />
+                            </div>
+                            <div className="col-span-4 text-right">
+                                {errors.url && <p className="text-red-500 py-1 text-sm">{String(errors.url.message)}</p>}
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-4 items-start gap-x-4">
+                            <div className="col-span-1 text-right">
+                                <Label htmlFor="description" className="text-right">
+                                    Description
+                                </Label>
+                            </div>
+                            <div className="col-span-3">
+                                <Textarea id="description" className="col-span-3" placeholder="Optional description here..." {...register("description")} />
+                            </div>
+                            <div className="col-span-4 text-right">
+                                {errors.description && <p className="text-red-500 py-1 text-sm">{String(errors.description.message)}</p>}
                             </div>
                         </div>
 
