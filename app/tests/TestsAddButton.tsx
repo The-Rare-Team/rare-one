@@ -68,9 +68,7 @@ export function TestsAddButton() {
         <form onSubmit={handleSubmit(onSubmit)}>
           <DialogHeader>
             <DialogTitle>New Test</DialogTitle>
-            <DialogDescription>
-              Enter information about the test you want to create.
-            </DialogDescription>
+            <DialogDescription>Enter information about the test you want to create.</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-x-4">
@@ -88,9 +86,7 @@ export function TestsAddButton() {
                 />
               </div>
               <div className="col-span-4 text-right">
-                {errors.name && (
-                  <p className="py-1 text-sm text-red-500">{String(errors.name.message)}</p>
-                )}
+                {errors.name && <p className="py-1 text-sm text-red-500">{String(errors.name.message)}</p>}
               </div>
             </div>
 
@@ -115,9 +111,7 @@ export function TestsAddButton() {
                 />
               </div>
               <div className="col-span-4 text-right">
-                {errors.url && (
-                  <p className="py-1 text-sm text-red-500">{String(errors.url.message)}</p>
-                )}
+                {errors.url && <p className="py-1 text-sm text-red-500">{String(errors.url.message)}</p>}
               </div>
             </div>
 

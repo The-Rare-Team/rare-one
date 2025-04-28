@@ -31,6 +31,7 @@
     "typescript",
     "typescriptreact"
   ],
+  "prettier.configPath": ".prettierrc.json",
   "prettier.requireConfig": true,
   "editor.tabSize": 2,
   "editor.insertSpaces": true

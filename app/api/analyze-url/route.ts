@@ -95,10 +95,7 @@ export async function POST(req: Request) {
   });
 
   // Log the raw output for debugging
-  console.log(
-    "generateText returned (raw):",
-    JSON.stringify({ text, toolCalls, toolResults, output }, null, 2),
-  );
+  console.log("generateText returned (raw):", JSON.stringify({ text, toolCalls, toolResults, output }, null, 2));
 
   await client.close();
   await transport.close();

@@ -89,10 +89,7 @@ export default function AnalyzePage() {
       {analysis && (
         <div className="rounded-md border p-4">
           <h2 className="mb-2 text-lg font-semibold">Analysis Result</h2>
-          <div
-            ref={analysisRef}
-            className="max-h-96 overflow-y-auto whitespace-pre-wrap rounded-md bg-gray-50 p-4"
-          >
+          <div ref={analysisRef} className="max-h-96 overflow-y-auto whitespace-pre-wrap rounded-md bg-gray-50 p-4">
             {analysis}
           </div>
         </div>

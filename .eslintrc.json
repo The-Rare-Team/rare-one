@@ -14,11 +14,13 @@
         "tabWidth": 2,
         "useTabs": false,
         "trailingComma": "all",
-        "printWidth": 100
+        "printWidth": 120
       }
     ],
     // (Optional) Example of extra useful lint rules:
-    "no-console": "warn",
-    "no-unused-vars": "warn"
+    "no-console": "off",
+    "no-unused-vars": "off",
+    "@typescript-eslint/no-explicit-any": "off",
+    "@typescript-eslint/no-unused-vars": "off"
   }
 }

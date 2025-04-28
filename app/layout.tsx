@@ -10,9 +10,7 @@ import Link from "next/link";
 import { ToastContainer } from "react-toastify";
 import "./globals.css";
 
-const defaultUrl = process.env.VERCEL_URL
-  ? `https://${process.env.VERCEL_URL}`
-  : "http://localhost:3000";
+const defaultUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000";
 
 export const metadata = {
   metadataBase: new URL(defaultUrl),
@@ -32,12 +30,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={geistSans.className} suppressHydrationWarning>
       <body className="bg-background text-foreground">
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <main className="flex min-h-screen flex-col items-center">
             <div className="flex w-full flex-1 flex-col items-center gap-2">
               <nav className="flex h-16 w-full justify-center border-b border-b-foreground/10">

@@ -145,9 +145,7 @@ export default function ProtectedPage() {
         ) : (
           <div className="p-6 text-center">
             <h3 className="text-lg font-medium">Browser View</h3>
-            <p className="text-zinc-500 dark:text-zinc-400">
-              Live browser view will appear here after launching
-            </p>
+            <p className="text-zinc-500 dark:text-zinc-400">Live browser view will appear here after launching</p>
           </div>
         )}
       </div>

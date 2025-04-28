@@ -77,11 +77,7 @@ export const forgotPasswordAction = async (formData: FormData) => {
     return redirect(callbackUrl);
   }
 
-  return encodedRedirect(
-    "success",
-    "/forgot-password",
-    "Check your email for a link to reset your password.",
-  );
+  return encodedRedirect("success", "/forgot-password", "Check your email for a link to reset your password.");
 };
 
 export const resetPasswordAction = async (formData: FormData) => {
@@ -91,11 +87,7 @@ export const resetPasswordAction = async (formData: FormData) => {
   const confirmPassword = formData.get("confirmPassword") as string;
 
   if (!password || !confirmPassword) {
-    encodedRedirect(
-      "error",
-      "/protected/reset-password",
-      "Password and confirm password are required",
-    );
+    encodedRedirect("error", "/protected/reset-password", "Password and confirm password are required");
   }
 
   if (password !== confirmPassword) {
@@ -134,16 +126,13 @@ export async function submitUrl(formData: FormData) {
     console.log("Received URL for analysis:", url);
 
     // Call our API endpoint to analyze the URL
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/analyze-url`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ url }),
+    const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/analyze-url`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
       },
-    );
+      body: JSON.stringify({ url }),
+    });
 
     if (!response.ok) {
       throw new Error(`Failed to analyze URL: ${response.statusText}`);

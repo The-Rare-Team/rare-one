@@ -59,9 +59,7 @@ const TestsTable = () => {
               </p>
               <p>
                 <span className="text-slate-600">Created at:</span>{" "}
-                <span className="font-medium text-slate-900">
-                  {new Date(test.createdAt).toLocaleString()}
-                </span>
+                <span className="font-medium text-slate-900">{new Date(test.createdAt).toLocaleString()}</span>
               </p>
             </div>
             <div className="ml-auto">

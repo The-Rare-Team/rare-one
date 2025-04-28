@@ -21,18 +21,15 @@ export default function FeaturesSection() {
   const features = [
     {
       title: "Context-Aware Testing",
-      description:
-        "Reads PRDs, codebase, and interacts with your product to build complete understanding",
+      description: "Reads PRDs, codebase, and interacts with your product to build complete understanding",
     },
     {
       title: "No Manual Scripting",
-      description:
-        "Automatically generates, runs, and maintains tests without requiring manual scripts or prompts",
+      description: "Automatically generates, runs, and maintains tests without requiring manual scripts or prompts",
     },
     {
       title: "Adaptive Test Coverage",
-      description:
-        "Intelligently adapts as your product evolves, catching regressions before production",
+      description: "Intelligently adapts as your product evolves, catching regressions before production",
     },
     {
       title: "Proactive Risk Identification",
