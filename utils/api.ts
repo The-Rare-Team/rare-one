@@ -12,8 +12,18 @@ export const fetcher = async (url: string) => {
 };
 
 export const submitter = async (url: string, { arg }: { arg: string }) => {
-    return fetch(url, {
+    const res = await fetch(url, {
         method: 'POST',
-        body: arg
-    }).then(res => res.json())
+        body: arg,
+    });
+
+    if (!res.ok) {
+        const error = new Error("An error occurred while submitting the data.") as Error & { info?: any; status?: number };
+        error.info = await res.json();
+        error.status = res.status;
+        throw error;
+    } else {
+
+        return res.json();
+    }
 }
