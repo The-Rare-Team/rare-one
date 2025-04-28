@@ -1,11 +1,17 @@
 "use client";
 
 import { Badge } from "@/components/ui/badge";
-import { fetcher } from "@/utils/api";
+import { fetcher, submitter } from "@/utils/api";
 import useSWR from "swr";
+import useSWRMutation from "swr/mutation";
 
 const TestView = ({ testId }: { testId: string }) => {
   const { data: test, error, isLoading } = useSWR(`/api/tests/${testId}`, fetcher);
+  const { trigger } = useSWRMutation(`/api/tests/${testId}/run`, submitter /** options */);
+
+  if (test?.status == "pending") {
+    trigger("");
+  }
 
   if (error) return <div>failed to load</div>;
   if (isLoading) return <div>loading...</div>;
@@ -73,6 +79,22 @@ const TestView = ({ testId }: { testId: string }) => {
             </div>
           </div>
         </div>
+      </div>
+      <div>
+        {test.liveViewUrl ? (
+          <iframe
+            src={test.liveViewUrl}
+            sandbox="allow-same-origin allow-scripts"
+            allow="clipboard-read; clipboard-write"
+            style={{ pointerEvents: "none", width: "100%", height: "100%", minHeight: "700px" }}
+            className="rounded-lg"
+          />
+        ) : (
+          <div className="p-6 text-center">
+            <h3 className="text-lg font-medium">Browser View</h3>
+            <p className="text-zinc-500 dark:text-zinc-400">Live browser view will appear here after launching</p>
+          </div>
+        )}
       </div>
     </div>
   );

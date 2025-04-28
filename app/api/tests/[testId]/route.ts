@@ -1,3 +1,5 @@
+import { connectPlaywrightMCP } from "@/lib/browser-manager";
+import { Test } from "@/lib/generated/prisma/client";
 import { prisma } from "@/utils/db";
 import { NextRequest, NextResponse } from "next/server";
 
