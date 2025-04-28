@@ -59,3 +59,12 @@ This project is scaffolded using [Next.js and Supabase Starter Kit](https://gith
 If want to run supabase locally, try
 
 > Check out [the docs for Local Development](https://supabase.com/docs/guides/getting-started/local-development) to also run Supabase locally.
+
+
+# Prisma Instructions
+
+## To Run Migrations Locally
+`npx prisma migrate dev`
+
+## In Production
+Use `npm run build` it will include `npx prisma migrate deploy`.
