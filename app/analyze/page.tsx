@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
 import { submitUrl } from '@/app/actions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { useEffect, useRef, useState } from 'react';
 
 export default function AnalyzePage() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -22,13 +22,13 @@ export default function AnalyzePage() {
     try {
       const formData = new FormData();
       formData.append('url', url);
-      
+
       const result = await submitUrl(formData);
-      
+
       if (!result.success) {
         throw new Error(result.message);
       }
-      
+
       // Start streaming the analysis
       await streamAnalysis(result.url || url);
     } catch (err) {
@@ -61,11 +61,11 @@ export default function AnalyzePage() {
 
       const decoder = new TextDecoder();
       let done = false;
-      
+
       while (!done) {
         const { done: streamDone, value } = await reader.read();
         done = streamDone;
-        
+
         if (value) {
           const text = decoder.decode(value, { stream: !done });
           setAnalysis((prev) => prev + text);
@@ -86,7 +86,7 @@ export default function AnalyzePage() {
   return (
     <div className="container max-w-2xl mx-auto py-8 px-4">
       <h1 className="text-2xl font-bold mb-6">URL Analyzer</h1>
-      
+
       <form onSubmit={handleSubmit} className="space-y-4 mb-6">
         <div className="flex flex-col space-y-2">
           <label htmlFor="url" className="text-sm font-medium">
@@ -120,8 +120,8 @@ export default function AnalyzePage() {
       {analysis && (
         <div className="border rounded-md p-4">
           <h2 className="text-lg font-semibold mb-2">Analysis Result</h2>
-          <div 
-            ref={analysisRef} 
+          <div
+            ref={analysisRef}
             className="bg-gray-50 p-4 rounded-md max-h-96 overflow-y-auto whitespace-pre-wrap"
           >
             {analysis}
