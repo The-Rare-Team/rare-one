@@ -1,4 +1,6 @@
-import { Button } from "@/components/ui/button"
+"use client";
+
+import { Button } from "@/components/ui/button";
 import {
     Dialog,
     DialogContent,
@@ -7,16 +9,17 @@ import {
     DialogHeader,
     DialogTitle,
     DialogTrigger,
-} from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { submitter } from "@/utils/api"
-import { PlusIcon } from "@heroicons/react/24/solid"
-import React from "react"
-import { SubmitHandler, useForm } from "react-hook-form"
-import { toast } from "react-toastify"
-import useSWRMutation from 'swr/mutation'
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { submitter } from "@/utils/api";
+import { PlusIcon } from "@heroicons/react/24/solid";
+import { useRouter } from "next/navigation";
+import React from "react";
+import { SubmitHandler, useForm } from "react-hook-form";
+import { toast } from "react-toastify";
+import useSWRMutation from 'swr/mutation';
 
 interface Inputs {
     name: string,
@@ -25,8 +28,9 @@ interface Inputs {
 }
 
 export function TestsAddButton() {
+    const router = useRouter();
+    const [open, setOpen] = React.useState(false);
 
-    const [open, setOpen] = React.useState(false)
 
     const {
         register,
@@ -41,11 +45,13 @@ export function TestsAddButton() {
         console.log("submitting form data", data);
 
         try {
-            await trigger(JSON.stringify(data));
+            const res = await trigger(JSON.stringify(data));
+            console.log("Response from API:", res);
 
             toast.success("Test created!");
             setOpen(false); // close the dialog
             reset(); // reset the form fields
+            router.push(`/tests/${res.id}`); // redirect to the new test page
 
         } catch (error) {
             console.error("Error creating test:", error);
