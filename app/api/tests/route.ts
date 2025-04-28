@@ -1,6 +1,6 @@
 import { prisma } from "@/utils/db";
 import { NextRequest, NextResponse } from "next/server";
-
+import { startSession } from "@/lib/browser-manager";
 // export const GET = async function GET(req: NextRequest, { params }: { params: { orgId: string, classId: string } }) {
 
 //     const orgId = (await params).orgId;
@@ -49,16 +49,18 @@ export const POST = async function POST(req: NextRequest) {
   //await new Promise(r => setTimeout(r, 5000)); // simulate a delay
 
   try {
+    const session = await startSession();
     const tests = await prisma.test.create({
       data: {
         name: data.name,
         url: data.url || undefined,
         description: data.description || undefined,
-        status: data.statu || undefined,
+        status: data.status || undefined,
+        liveViewUrl: session.liveViewLink,
+        sessionId: session.sessionId,
+        cdpEndpoint: session.cdpEndpoint,
       },
     });
-
-    // TODO Ahmed/Roy call the test runner to run the test immediately after creating it.
 
     return NextResponse.json(tests, { status: 200 });
   } catch (error) {
