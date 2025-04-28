@@ -10,3 +10,10 @@ export const fetcher = async (url: string) => {
 
     return res.json();
 };
+
+export const submitter = async (url: string, { arg }: { arg: string }) => {
+    return fetch(url, {
+        method: 'POST',
+        body: arg
+    }).then(res => res.json())
+}

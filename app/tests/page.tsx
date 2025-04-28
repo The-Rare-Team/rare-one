@@ -1,5 +1,7 @@
 "use client";
 
+import { BeakerIcon } from '@heroicons/react/24/solid';
+import { TestsAddButton } from "./TestsAddButton";
 import TestsTable from "./TestsTable";
 
 const Page = () => {
@@ -7,9 +9,18 @@ const Page = () => {
 
   return (
     <div>
-      <h1 className="text-2xl font-medium">Tests</h1>
-      <p>View all your previously ran tests here.</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-medium"><BeakerIcon className="size-7 inline" /> Tests</h1>
+          <p>View all your previously ran tests here.</p>
+        </div>
+        <div>
+          <TestsAddButton />
+        </div>
+      </div>
+
       <div className="mt-3">
+
         <TestsTable />
       </div>
     </div>
