@@ -46,7 +46,6 @@ export function TestsAddButton() {
 
         try {
             const res = await trigger(JSON.stringify(data));
-            console.log("Response from API:", res);
 
             toast.success("Test created!");
             setOpen(false); // close the dialog
