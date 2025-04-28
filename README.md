@@ -38,13 +38,13 @@ This project is scaffolded using [Next.js and Supabase Starter Kit](https://gith
 
 4. (New Step!) Add the `DATABASE_URL` and `DIRECT_URL` connection strings from Supabase (Dashboard --> Database --> Connect --> ORM: Prisma) and don't forget to change the `[YOUR-PASSWORD]`! You must also use `.env` for your environment variables, not `.env.local`
 
-  ```
-  # Connect to Supabase via connection pooling
-  DATABASE_URL="postgresql://postgres.projectABC:[YOUR-PASSWORD]@aws-0-us-east-2.pooler.supabase.com:6543/postgres?pgbouncer=true"
+```
+# Connect to Supabase via connection pooling
+DATABASE_URL="postgresql://postgres.projectABC:[YOUR-PASSWORD]@aws-0-us-east-2.pooler.supabase.com:6543/postgres?pgbouncer=true"
 
-  # Direct connection to the database. Used for migrations
-  DIRECT_URL="postgresql://postgres.projectABC:[YOUR-PASSWORD]@aws-0-us-east-2.pooler.supabase.com:5432/postgres"
-  ```
+# Direct connection to the database. Used for migrations
+DIRECT_URL="postgresql://postgres.projectABC:[YOUR-PASSWORD]@aws-0-us-east-2.pooler.supabase.com:5432/postgres"
+```
 
 5. You can now run the Next.js local development server:
 
@@ -60,15 +60,17 @@ If want to run supabase locally, try
 
 > Check out [the docs for Local Development](https://supabase.com/docs/guides/getting-started/local-development) to also run Supabase locally.
 
-
 # Prisma Instructions
 
 ## Before First Run
+
 Generate prisma local files.
 `npx prisma generate`
 
 ## To Run Migrations Locally
+
 `npx prisma migrate dev`
 
 ## In Production
+
 Use `npm run build` it will include `npx prisma migrate deploy` and `npx prisma generate`.

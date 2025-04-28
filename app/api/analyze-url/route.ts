@@ -8,15 +8,19 @@ import { startBrowserSession } from "@/app/actions";
 
 // Define the schema for the expected structured output
 const urlSchema = z.object({
-  journey: z.array(z.object({
-    action: z.enum(["navigate", "click", "type", "selectOption", "press"]),
-    selector: z.string().optional(),
-    url: z.string().optional(),
-    text: z.string().optional(),
-    values: z.array(z.string()).optional(),
-    key: z.string().optional(),
-  })).describe('The sequence of actions taken.'),
-  finalUrl: z.string().url().describe('The final URL after all actions are completed.'),
+  journey: z
+    .array(
+      z.object({
+        action: z.enum(["navigate", "click", "type", "selectOption", "press"]),
+        selector: z.string().optional(),
+        url: z.string().optional(),
+        text: z.string().optional(),
+        values: z.array(z.string()).optional(),
+        key: z.string().optional(),
+      }),
+    )
+    .describe("The sequence of actions taken."),
+  finalUrl: z.string().url().describe("The final URL after all actions are completed."),
 });
 
 export async function POST(req: Request) {
@@ -27,7 +31,6 @@ export async function POST(req: Request) {
   }
 
   const { tools, client, transport } = await connectTools();
-
 
   const systemPrompt = `
   You are a senior QA engineer and Playwright MCP specialist. Your job is to drive an autonomous "expert tester" that uses only the Playwright MCP tools provided. At each step:
@@ -81,20 +84,26 @@ export async function POST(req: Request) {
     temperature: 0,
     maxTokens: 5000,
     maxSteps: 25,
-    experimental_output: Output.object({ schema: urlSchema })
+    experimental_output: Output.object({ schema: urlSchema }),
   });
 
   let text, steps, toolCalls, toolResults, output;
   try {
-    ({ text, steps, toolCalls, toolResults, experimental_output: output } = await generateText({
-      model: openai('gpt-4.1-mini'), // 'gpt-4o', 'gpt-4.1-nano' ,  'o1-mini-2024-09-12'
+    ({
+      text,
+      steps,
+      toolCalls,
+      toolResults,
+      experimental_output: output,
+    } = await generateText({
+      model: openai("gpt-4.1-mini"), // 'gpt-4o', 'gpt-4.1-nano' ,  'o1-mini-2024-09-12'
       system: systemPrompt,
       tools,
-      messages: [{ role: 'user', content: userPrompt }],
+      messages: [{ role: "user", content: userPrompt }],
       temperature: 0.1,
       maxTokens: 5000,
       maxSteps: 25,
-      experimental_output: Output.object({ schema: urlSchema })
+      experimental_output: Output.object({ schema: urlSchema }),
     }));
   } catch (error: any) {
     console.error("Error during generateText:", error);
@@ -103,33 +112,31 @@ export async function POST(req: Request) {
     // Check if it's an AI SDK specific error we know how to handle
     if (error.toolName && error.availableTools) {
       return NextResponse.json(
-        { 
-          error: `AI model tried to use unavailable tool '${error.toolName}'. Available tools: ${error.availableTools.join(', ')}`,
-          details: error.message 
-        }, 
-        { status: 500 }
+        {
+          error: `AI model tried to use unavailable tool '${error.toolName}'. Available tools: ${error.availableTools.join(", ")}`,
+          details: error.message,
+        },
+        { status: 500 },
       );
     }
     // Generic error
     return NextResponse.json(
-      { 
+      {
         error: "Failed to analyze URL due to an internal error.",
-        details: error.message || "Unknown error" 
-      }, 
-      { status: 500 }
+        details: error.message || "Unknown error",
+      },
+      { status: 500 },
     );
   }
-  
-  console.log('=== raw toolCalls ===', toolCalls);
-  console.log('=== raw toolResults ===', toolResults);
+
+  console.log("=== raw toolCalls ===", toolCalls);
+  console.log("=== raw toolResults ===", toolResults);
   steps.forEach((step, i) => {
     console.log(`\n--- STEP ${i + 1} (${step.stepType}) ---`);
-    console.log('finishReason:', step.finishReason);
-    console.log('toolCalls:', step.toolCalls);
-    console.log('toolResults:', step.toolResults);
+    console.log("finishReason:", step.finishReason);
+    console.log("toolCalls:", step.toolCalls);
+    console.log("toolResults:", step.toolResults);
   });
-
-
 
   // Log the raw output for debugging
   console.log("generateText returned (raw):", JSON.stringify({ text, toolCalls, toolResults, output }, null, 2));
@@ -137,28 +144,26 @@ export async function POST(req: Request) {
   await client.close();
   await transport.close();
   // Ensure output exists and has the finalUrl property
-  const finalUrl = output?.finalUrl; 
+  const finalUrl = output?.finalUrl;
   const journey = output?.journey; // You might want to use the journey data too
 
-  const formattedOutput = finalUrl 
-    ? `@${finalUrl}` 
-    : 'Error: Could not extract final URL';
-  
+  const formattedOutput = finalUrl ? `@${finalUrl}` : "Error: Could not extract final URL";
+
   // Optionally include journey in the response if needed
   return NextResponse.json(
-    { 
-      text: formattedOutput, 
+    {
+      text: formattedOutput,
       // journey: journey // Uncomment if you want to return the journey too
-    }, 
-    { status: 200 }
+    },
+    { status: 200 },
   );
 }
 
 async function connectTools() {
   const { session, liveViewLink } = await startBrowserSession();
   const transport = new Experimental_StdioMCPTransport({
-    command: 'npx',
-    args: ['@playwright/mcp@latest', '--cdp-endpoint', session.connectUrl], // , '--vision'
+    command: "npx",
+    args: ["@playwright/mcp@latest", "--cdp-endpoint", session.connectUrl], // , '--vision'
   });
 
   const client = await experimental_createMCPClient({
