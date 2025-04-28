@@ -1,0 +1,24 @@
+{
+  "extends": [
+    "next/core-web-vitals",
+    "next/typescript",
+    "plugin:prettier/recommended" // Enable prettier plugin and recommended rules
+  ],
+  "plugins": ["prettier"],
+  "rules": {
+    "prettier/prettier": [
+      "error",
+      {
+        "singleQuote": false,
+        "semi": true,
+        "tabWidth": 2,
+        "useTabs": false,
+        "trailingComma": "all",
+        "printWidth": 100
+      }
+    ],
+    // (Optional) Example of extra useful lint rules:
+    "no-console": "warn",
+    "no-unused-vars": "warn"
+  }
+}

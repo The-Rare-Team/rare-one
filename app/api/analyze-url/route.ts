@@ -1,26 +1,23 @@
-import { NextResponse } from 'next/server';
-import { generateText, Output } from 'ai';
-import { openai } from '@ai-sdk/openai';
-import { experimental_createMCPClient } from 'ai';
-import { Experimental_StdioMCPTransport } from 'ai/mcp-stdio';
-import { z } from 'zod';
-import { startBrowserSession } from '@/app/actions';
+import { NextResponse } from "next/server";
+import { generateText, Output } from "ai";
+import { openai } from "@ai-sdk/openai";
+import { experimental_createMCPClient } from "ai";
+import { Experimental_StdioMCPTransport } from "ai/mcp-stdio";
+import { z } from "zod";
+import { startBrowserSession } from "@/app/actions";
 
 // Define the schema for the expected structured output
 const urlSchema = z.object({
-  finalUrl: z.string().url().describe('The final URL after all actions are completed.'),
+  finalUrl: z.string().url().describe("The final URL after all actions are completed."),
 });
 
 export async function POST(req: Request) {
   const { url } = await req.json();
 
   if (!url) {
-    return NextResponse.json(
-      { error: 'URL is required' },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "URL is required" }, { status: 400 });
   }
-  
+
   const { tools, client, transport } = await connectTools();
 
   // System prompt emphasizing structured output
@@ -35,7 +32,6 @@ export async function POST(req: Request) {
      • **finalUrl**: the URL you end on  
   If you encounter multiple candidate CTAs, pick the one with the largest visible area or highest semantic prominence.
   `.trim();
-  
 
   // User request defining the specific journey and requesting structured output
   // const userPrompt = `Use playwright MCP tools to go to the page and click on the main user journey link/button: ${url}. After completing the actions, return the final page URL using the provided structured output schema.`;
@@ -60,43 +56,48 @@ export async function POST(req: Request) {
     "finalUrl": "<resulting URL>"
   }
   `.trim();
-  
-  console.log('Calling generateText with:', {
-    model: 'gpt-4.1-mini', 
-    tools: !!tools, 
-    system: systemPrompt, 
+
+  console.log("Calling generateText with:", {
+    model: "gpt-4.1-mini",
+    tools: !!tools,
+    system: systemPrompt,
     messages: [
       {
-        role: 'user',
+        role: "user",
         content: userPrompt,
       },
     ],
     temperature: 0,
     maxTokens: 5000,
     maxSteps: 10,
-    experimental_output: { schema: urlSchema } // Log structured output schema presence
+    experimental_output: { schema: urlSchema }, // Log structured output schema presence
   });
 
-  const { text, toolCalls, toolResults, experimental_output: output } = await generateText({
-    model: openai('gpt-4.1-mini'),
-    system: systemPrompt, 
+  const {
+    text,
+    toolCalls,
+    toolResults,
+    experimental_output: output,
+  } = await generateText({
+    model: openai("gpt-4.1-mini"),
+    system: systemPrompt,
     tools,
     messages: [
       {
-        role: 'user',
-        content: userPrompt, 
-      }
+        role: "user",
+        content: userPrompt,
+      },
     ],
-    temperature: 0.2,       
+    temperature: 0.2,
     maxTokens: 5000,
-    maxSteps: 10, 
-    experimental_output: Output.object({ schema: urlSchema }) // Use structured output
+    maxSteps: 10,
+    experimental_output: Output.object({ schema: urlSchema }), // Use structured output
   });
 
   // Log the raw output for debugging
   console.log(
-    'generateText returned (raw):',
-    JSON.stringify({ text, toolCalls, toolResults, output }, null, 2) 
+    "generateText returned (raw):",
+    JSON.stringify({ text, toolCalls, toolResults, output }, null, 2),
   );
 
   await client.close();
@@ -104,19 +105,19 @@ export async function POST(req: Request) {
 
   // Extract and format the final URL from the structured output
   const finalUrl = output?.finalUrl;
-  const formattedOutput = finalUrl ? `@${finalUrl}` : 'Error: Could not extract final URL';
+  const formattedOutput = finalUrl ? `@${finalUrl}` : "Error: Could not extract final URL";
 
   return NextResponse.json(
     { text: formattedOutput }, // Return the formatted URL only
-    { status: 200 }
+    { status: 200 },
   );
 }
 
 async function connectTools() {
   const { session, liveViewLink } = await startBrowserSession();
   const transport = new Experimental_StdioMCPTransport({
-    command: 'npx',
-    args: ['@playwright/mcp@latest', '--cdp-endpoint', session.connectUrl],
+    command: "npx",
+    args: ["@playwright/mcp@latest", "--cdp-endpoint", session.connectUrl],
   });
 
   const client = await experimental_createMCPClient({
@@ -125,5 +126,5 @@ async function connectTools() {
 
   const tools = await client.tools();
 
-  return { tools, client, transport }
+  return { tools, client, transport };
 }

@@ -9,12 +9,12 @@ import { useFormStatus } from "react-dom";
 
 function SubmitButton() {
   const { pending } = useFormStatus();
-  
+
   return (
     <button
       type="submit"
       disabled={pending}
-      className="w-full p-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-blue-400"
+      className="w-full rounded bg-blue-600 p-2 text-white hover:bg-blue-700 disabled:bg-blue-400"
     >
       {pending ? "Submitting..." : "Submit"}
     </button>
@@ -24,7 +24,7 @@ function SubmitButton() {
 export default function ProtectedPage() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [message, setMessage] = useState<{type: 'success' | 'error', text: string} | null>(null);
+  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [liveViewLink, setLiveViewLink] = useState<string | null>(null);
   const router = useRouter();
 
@@ -32,12 +32,12 @@ export default function ProtectedPage() {
     async function getUser() {
       const supabase = createClient();
       const { data } = await supabase.auth.getUser();
-      
+
       if (!data.user) {
         router.push("/sign-in");
         return;
       }
-      
+
       setUser(data.user);
       setLoading(false);
     }
@@ -49,21 +49,21 @@ export default function ProtectedPage() {
     try {
       // Clear any previous messages
       setMessage(null);
-      
+
       // Call the server action
       const result = await submitUrl(formData);
-      
+
       if (result.success) {
-        setMessage({ type: 'success', text: result.message });
+        setMessage({ type: "success", text: result.message });
         // Reset the form
-        const form = document.getElementById('urlForm') as HTMLFormElement;
+        const form = document.getElementById("urlForm") as HTMLFormElement;
         if (form) form.reset();
       } else {
-        setMessage({ type: 'error', text: result.message });
+        setMessage({ type: "error", text: result.message });
       }
     } catch (error) {
       console.error("Error:", error);
-      setMessage({ type: 'error', text: 'An unexpected error occurred' });
+      setMessage({ type: "error", text: "An unexpected error occurred" });
     }
   }
 
@@ -71,21 +71,21 @@ export default function ProtectedPage() {
     try {
       // Clear any previous messages
       setMessage(null);
-      
+
       // Call the server action
-      const { session,liveViewLink } = await startBrowserSession();
+      const { session, liveViewLink } = await startBrowserSession();
       setLiveViewLink(liveViewLink);
 
       const result = await launchBrowser(session.id, session.connectUrl);
-      
+
       if (result.success) {
-        setMessage({ type: 'success', text: result.message });
+        setMessage({ type: "success", text: result.message });
       } else {
-        setMessage({ type: 'error', text: result.message });
+        setMessage({ type: "error", text: result.message });
       }
     } catch (error) {
       console.error("Error:", error);
-      setMessage({ type: 'error', text: 'An unexpected error occurred' });
+      setMessage({ type: "error", text: "An unexpected error occurred" });
     }
   }
 
@@ -94,25 +94,27 @@ export default function ProtectedPage() {
   }
 
   return (
-    <div className="grid grid-cols-12 min-h-[90vh] w-full gap-6">
+    <div className="grid min-h-[90vh] w-full grid-cols-12 gap-6">
       {/* Left column - Forms */}
       <div className="col-span-4">
         {message && (
-          <div className={`mb-4 p-3 rounded ${message.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+          <div
+            className={`mb-4 rounded p-3 ${message.type === "success" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}
+          >
             {message.text}
           </div>
         )}
-        
-        <form id="urlForm" action={handleFormAction} className="w-full mb-6">
+
+        <form id="urlForm" action={handleFormAction} className="mb-6 w-full">
           <div className="mb-4">
-            <label htmlFor="url" className="block text-sm font-medium mb-2">
+            <label htmlFor="url" className="mb-2 block text-sm font-medium">
               Enter URL
             </label>
             <input
               id="url"
               name="url"
               type="url"
-              className="w-full p-2 border border-zinc-300 dark:border-zinc-700 rounded dark:bg-zinc-800"
+              className="w-full rounded border border-zinc-300 p-2 dark:border-zinc-700 dark:bg-zinc-800"
               placeholder="https://example.com"
               required
             />
@@ -123,7 +125,7 @@ export default function ProtectedPage() {
         <div className="w-full">
           <button
             onClick={handleLaunchBrowser}
-            className="w-full p-2 bg-purple-600 text-white rounded hover:bg-purple-700"
+            className="w-full rounded bg-purple-600 p-2 text-white hover:bg-purple-700"
           >
             Launch Browser
           </button>
@@ -137,13 +139,15 @@ export default function ProtectedPage() {
             src={liveViewLink}
             sandbox="allow-same-origin allow-scripts"
             allow="clipboard-read; clipboard-write"
-            style={{ pointerEvents: 'none', width: '100%', height: '100%', minHeight: '700px' }}
+            style={{ pointerEvents: "none", width: "100%", height: "100%", minHeight: "700px" }}
             className="rounded-lg"
           />
         ) : (
-          <div className="text-center p-6">
+          <div className="p-6 text-center">
             <h3 className="text-lg font-medium">Browser View</h3>
-            <p className="text-zinc-500 dark:text-zinc-400">Live browser view will appear here after launching</p>
+            <p className="text-zinc-500 dark:text-zinc-400">
+              Live browser view will appear here after launching
+            </p>
           </div>
         )}
       </div>

@@ -1,27 +1,27 @@
-'use client';
+"use client";
 
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { useEffect, useRef, useState } from 'react';
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { useEffect, useRef, useState } from "react";
 
 export default function AnalyzePage() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [url, setUrl] = useState('');
-  const [analysis, setAnalysis] = useState('');
-  const [error, setError] = useState('');
+  const [url, setUrl] = useState("");
+  const [analysis, setAnalysis] = useState("");
+  const [error, setError] = useState("");
   const analysisRef = useRef<HTMLDivElement>(null);
 
   // Function to handle URL submission
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsAnalyzing(true);
-    setError('');
-    setAnalysis('');
+    setError("");
+    setAnalysis("");
 
     try {
       await streamAnalysis(url);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred during analysis');
+      setError(err instanceof Error ? err.message : "An error occurred during analysis");
     } finally {
       setIsAnalyzing(false);
     }
@@ -29,14 +29,14 @@ export default function AnalyzePage() {
 
   // Function to stream the analysis from the API
   const streamAnalysis = async (urlToAnalyze: string) => {
-    const response = await fetch('/api/analyze-url', {
-      method: 'POST',
+    const response = await fetch("/api/analyze-url", {
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({ url: urlToAnalyze }),
     });
-    
+
     if (!response.ok) {
       throw new Error(`API request failed with status: ${response.status}`);
     }
@@ -53,10 +53,10 @@ export default function AnalyzePage() {
   }, [analysis]);
 
   return (
-    <div className="container max-w-2xl mx-auto py-8 px-4">
-      <h1 className="text-2xl font-bold mb-6">URL Analyzer</h1>
+    <div className="container mx-auto max-w-2xl px-4 py-8">
+      <h1 className="mb-6 text-2xl font-bold">URL Analyzer</h1>
 
-      <form onSubmit={handleSubmit} className="space-y-4 mb-6">
+      <form onSubmit={handleSubmit} className="mb-6 space-y-4">
         <div className="flex flex-col space-y-2">
           <label htmlFor="url" className="text-sm font-medium">
             Enter URL to analyze
@@ -73,25 +73,25 @@ export default function AnalyzePage() {
               disabled={isAnalyzing}
             />
             <Button type="submit" disabled={isAnalyzing}>
-              {isAnalyzing ? 'Analyzing...' : 'Analyze'}
+              {isAnalyzing ? "Analyzing..." : "Analyze"}
             </Button>
           </div>
         </div>
       </form>
 
       {error && (
-        <div className="bg-red-50 text-red-500 p-4 rounded-md mb-4">
+        <div className="mb-4 rounded-md bg-red-50 p-4 text-red-500">
           <p className="font-medium">Error</p>
           <p>{error}</p>
         </div>
       )}
 
       {analysis && (
-        <div className="border rounded-md p-4">
-          <h2 className="text-lg font-semibold mb-2">Analysis Result</h2>
+        <div className="rounded-md border p-4">
+          <h2 className="mb-2 text-lg font-semibold">Analysis Result</h2>
           <div
             ref={analysisRef}
-            className="bg-gray-50 p-4 rounded-md max-h-96 overflow-y-auto whitespace-pre-wrap"
+            className="max-h-96 overflow-y-auto whitespace-pre-wrap rounded-md bg-gray-50 p-4"
           >
             {analysis}
           </div>
@@ -99,4 +99,4 @@ export default function AnalyzePage() {
       )}
     </div>
   );
-} 
+}

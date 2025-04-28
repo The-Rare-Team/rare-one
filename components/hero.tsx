@@ -3,18 +3,16 @@ import { Button } from "./ui/button";
 
 export default function Hero() {
   return (
-    <div className="flex flex-col gap-8 items-center py-16 px-4 md:px-6 lg:px-8 max-w-5xl mx-auto text-center">
-      <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight">
-        Rare QA
-      </h1>
-      <p className="text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto">
+    <div className="mx-auto flex max-w-5xl flex-col items-center gap-8 px-4 py-16 text-center md:px-6 lg:px-8">
+      <h1 className="text-4xl font-bold tracking-tight md:text-5xl lg:text-6xl">Rare QA</h1>
+      <p className="mx-auto max-w-2xl text-xl text-muted-foreground md:text-2xl">
         The autonomous AI teammate that fully owns the QA process for software teams
       </p>
-      <div className="flex flex-col sm:flex-row gap-4 mt-4">
-        <Button className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-6 text-lg rounded-lg">
+      <div className="mt-4 flex flex-col gap-4 sm:flex-row">
+        <Button className="rounded-lg bg-purple-600 px-6 py-6 text-lg text-white hover:bg-purple-700">
           Get Started
         </Button>
-        <Button variant="outline" className="px-6 py-6 text-lg rounded-lg">
+        <Button variant="outline" className="rounded-lg px-6 py-6 text-lg">
           Request Demo
         </Button>
       </div>

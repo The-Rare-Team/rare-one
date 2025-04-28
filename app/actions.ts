@@ -14,11 +14,7 @@ export const signUpAction = async (formData: FormData) => {
   const origin = (await headers()).get("origin");
 
   if (!email || !password) {
-    return encodedRedirect(
-      "error",
-      "/sign-up",
-      "Email and password are required",
-    );
+    return encodedRedirect("error", "/sign-up", "Email and password are required");
   }
 
   const { error } = await supabase.auth.signUp({
@@ -74,11 +70,7 @@ export const forgotPasswordAction = async (formData: FormData) => {
 
   if (error) {
     console.error(error.message);
-    return encodedRedirect(
-      "error",
-      "/forgot-password",
-      "Could not reset password",
-    );
+    return encodedRedirect("error", "/forgot-password", "Could not reset password");
   }
 
   if (callbackUrl) {
@@ -107,11 +99,7 @@ export const resetPasswordAction = async (formData: FormData) => {
   }
 
   if (password !== confirmPassword) {
-    encodedRedirect(
-      "error",
-      "/protected/reset-password",
-      "Passwords do not match",
-    );
+    encodedRedirect("error", "/protected/reset-password", "Passwords do not match");
   }
 
   const { error } = await supabase.auth.updateUser({
@@ -119,11 +107,7 @@ export const resetPasswordAction = async (formData: FormData) => {
   });
 
   if (error) {
-    encodedRedirect(
-      "error",
-      "/protected/reset-password",
-      "Password update failed",
-    );
+    encodedRedirect("error", "/protected/reset-password", "Password update failed");
   }
 
   encodedRedirect("success", "/protected/reset-password", "Password updated");
@@ -139,41 +123,44 @@ export const signOutAction = async () => {
  * Server action to process a submitted URL
  */
 export async function submitUrl(formData: FormData) {
-  const url = formData.get('url') as string;
-  
+  const url = formData.get("url") as string;
+
   if (!url) {
-    return { success: false, message: 'URL is required' };
+    return { success: false, message: "URL is required" };
   }
-  
+
   try {
     // Log the URL
-    console.log('Received URL for analysis:', url);
-    
+    console.log("Received URL for analysis:", url);
+
     // Call our API endpoint to analyze the URL
-    const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/analyze-url`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/analyze-url`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ url }),
       },
-      body: JSON.stringify({ url }),
-    });
-    
+    );
+
     if (!response.ok) {
       throw new Error(`Failed to analyze URL: ${response.statusText}`);
     }
-    
+
     // For streaming responses, we return a success status
     // The actual content will be handled by the client component
-    return { 
-      success: true, 
-      message: 'URL analysis initiated',
+    return {
+      success: true,
+      message: "URL analysis initiated",
       url: url, // Return the URL for reference on the client side
     };
   } catch (error) {
-    console.error('Error in submitUrl action:', error);
-    return { 
-      success: false, 
-      message: error instanceof Error ? error.message : 'Failed to process URL' 
+    console.error("Error in submitUrl action:", error);
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : "Failed to process URL",
     };
   }
 }
@@ -183,13 +170,13 @@ export async function submitUrl(formData: FormData) {
  */
 export async function launchBrowser(sessionId: string, connectUrl: string) {
   // This is just a placeholder
-  console.log('Browser launch requested');
+  console.log("Browser launch requested");
 
   await _launchBrowser(sessionId, connectUrl);
 
-  return { 
-    success: true, 
-    message: 'Browser launch requested'
+  return {
+    success: true,
+    message: "Browser launch requested",
   };
 }
 
@@ -202,7 +189,6 @@ export async function startBrowserSession() {
 
   return { session, liveViewLink };
 }
-
 
 async function _launchBrowser(sessionId: string, connectUrl: string) {
   // Connect to the session

@@ -6,7 +6,7 @@ export default async function Home() {
   return (
     <>
       <Hero />
-      <main className="flex-1 flex flex-col">
+      <main className="flex flex-1 flex-col">
         <FeaturesSection />
         <CTASection />
       </main>

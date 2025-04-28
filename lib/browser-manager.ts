@@ -1,6 +1,6 @@
 import Browserbase from "@browserbasehq/sdk";
-import { experimental_createMCPClient } from 'ai';
-import { Experimental_StdioMCPTransport } from 'ai/mcp-stdio';
+import { experimental_createMCPClient } from "ai";
+import { Experimental_StdioMCPTransport } from "ai/mcp-stdio";
 
 interface BroswerSession {
   browserbaseSessionId: string;
@@ -23,8 +23,8 @@ async function _startBrowserbaseSession(): Promise<BroswerSession> {
 export async function startSession() {
   const session = await _startBrowserbaseSession();
   const transport = new Experimental_StdioMCPTransport({
-    command: 'npx',
-    args: ['@playwright/mcp@latest', '--cdp-endpoint', session.cdpEndpoint],
+    command: "npx",
+    args: ["@playwright/mcp@latest", "--cdp-endpoint", session.cdpEndpoint],
   });
 
   const client = await experimental_createMCPClient({ transport });
