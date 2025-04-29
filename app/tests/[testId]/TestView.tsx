@@ -16,11 +16,15 @@ const TestView = ({ testId }: { testId: string }) => {
     isLoading,
   } = useSWR(`/api/tests/${testId}`, fetcher, {
     refreshInterval: (test) => {
-      if (!test) return 6000; // If no data yet, don't refresh
+      if (!test) return 1000; // If no data yet, don't refresh
       return test.status === "pending" ? 1000 : 6000; // 5s if pending, otherwise no refresh
     },
   });
-  const { data: replayData, trigger } = useSWRMutation(`/api/tests/${testId}/replay`, fetcher);
+  const {
+    data: replayData,
+    trigger,
+    isMutating: isLoadingReplay,
+  } = useSWRMutation(`/api/tests/${testId}/replay`, fetcher);
   const playerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -174,7 +178,12 @@ const TestView = ({ testId }: { testId: string }) => {
           <div className="p-6 text-center">
             <h3 className="text-lg font-medium">Test Complete</h3>
             <p className="text-zinc-500 dark:text-zinc-400">You can now view the test session replay here.</p>
-            <Button variant="default" onClick={() => loadReplay()} className="mt-3 bg-green-700 hover:bg-green-800">
+            <Button
+              isLoading={isLoadingReplay}
+              variant="default"
+              onClick={() => loadReplay()}
+              className="mt-3 bg-green-700 hover:bg-green-800"
+            >
               Load Test Replay
             </Button>
           </div>
