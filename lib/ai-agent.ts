@@ -124,7 +124,7 @@ export async function runAIAgent(test: Test) {
   // Log the new fields
   console.log("=== Site Description ===");
   console.log(output?.siteDescription || "No site description provided");
-  
+
   console.log("=== Steps Summary ===");
   console.log(output?.stepsSummary || "No steps summary provided");
 
@@ -139,11 +139,11 @@ export async function runAIAgent(test: Test) {
     finalUrl: finalUrl || null,
     siteDescription: siteDescription || null,
     stepsSummary: stepsSummary || null,
-    journey: journey || []
+    journey: journey || [],
   };
-  
+
   console.log("=== Return Object ===");
   console.log(JSON.stringify(returnObject, null, 2));
-  
+
   return returnObject;
 }
