@@ -6,11 +6,20 @@ import { fetcher } from "@/utils/api";
 import { useEffect, useRef } from "react";
 import rrwebPlayer from "rrweb-player";
 import "rrweb-player/dist/style.css";
-import useSWR from "swr";
+import useSWR, { mutate } from "swr";
 import useSWRMutation from "swr/mutation";
 
 const TestView = ({ testId }: { testId: string }) => {
-  const { data: test, error, isLoading } = useSWR(`/api/tests/${testId}`, fetcher);
+  const {
+    data: test,
+    error,
+    isLoading,
+  } = useSWR(`/api/tests/${testId}`, fetcher, {
+    refreshInterval: (test) => {
+      if (!test) return 6000; // If no data yet, don't refresh
+      return test.status === "pending" ? 1000 : 6000; // 5s if pending, otherwise no refresh
+    },
+  });
   const { data: replayData, trigger } = useSWRMutation(`/api/tests/${testId}/replay`, fetcher);
   const playerRef = useRef<HTMLDivElement>(null);
 
@@ -27,6 +36,15 @@ const TestView = ({ testId }: { testId: string }) => {
       });
     }
   }, [replayData, playerRef]);
+
+  // start test if test is pending
+  useEffect(() => {
+    if (!test) return;
+    if (test.status == "pending") {
+      startTest();
+      mutate(`/api/tests/${testId}`); // force revalidation of the test data
+    }
+  }, [test]);
 
   if (error) return <div>failed to load</div>;
   if (isLoading) return <div>loading...</div>;
@@ -145,7 +163,7 @@ const TestView = ({ testId }: { testId: string }) => {
             <h3 className="text-lg font-medium">Browser View</h3>
             <p className="text-zinc-500 dark:text-zinc-400">Live browser view will appear here after launching</p>
             {test.status == "pending" && (
-              <Button variant="default" onClick={() => startTest()} className="mt-3 bg-green-700 hover:bg-green-800">
+              <Button variant="default" onClick={() => startTest()} className="mt-3 bg-blue-700 hover:bg-blue-800">
                 Run Test
               </Button>
             )}
