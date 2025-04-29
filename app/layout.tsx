@@ -38,7 +38,7 @@ export default function RootLayout({
                   <div className="flex items-center gap-5 font-semibold">
                     <Link href={"/"} className="flex gap-x-2 text-lg">
                       <Image src="/logo.png" alt="Logo" width={35} height={35} className="-mt-2" />
-                      <span className="text-lg">Rare One</span>
+                      <span className="text-lg">Rare QA</span>
                     </Link>
                     <NavItems />
                   </div>
