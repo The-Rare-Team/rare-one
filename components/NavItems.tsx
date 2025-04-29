@@ -8,9 +8,6 @@ const NavItems = () => {
 
   return (
     <div className="flex items-center gap-5 text-slate-400">
-      <Link href={"/analyze"} className={path.includes("/analyze") ? "text-slate-900" : ""}>
-        URL Analyzer
-      </Link>
       <Link href={"/tests"} className={path.includes("/tests") ? "text-slate-900" : ""}>
         Tests
       </Link>
