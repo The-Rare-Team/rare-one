@@ -1,5 +1,4 @@
-import { connectPlaywrightMCP } from "@/lib/browser-manager";
-import { Test } from "@/lib/generated/prisma/client";
+import { runAIAgent } from "@/lib/ai-agent";
 import { prisma } from "@/utils/db";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -19,35 +18,7 @@ export const POST = async function POST(req: NextRequest, { params }: { params: 
       },
     });
 
-    await runTest(test!);
-
-    return NextResponse.json(test, { status: 200 });
-  } catch (error) {
-    console.error("Database prisma error:", error);
-    return NextResponse.json({ message: "ERROR" }, { status: 500 });
-  }
-};
-
-async function runTest(test: Test) {
-  const { tools, close } = await connectPlaywrightMCP(test.cdpEndpoint!);
-
-  try {
-    await tools.browser_navigate.execute(
-      {
-        url: "https://supabase.com",
-      },
-      {
-        toolCallId: "1",
-        messages: [
-          {
-            role: "user",
-            content: "hello",
-          },
-        ],
-      },
-    );
-
-    await new Promise((r) => setTimeout(r, 10000));
+    const result = await runAIAgent(test!);
 
     await prisma.test.update({
       where: {
@@ -58,20 +29,19 @@ async function runTest(test: Test) {
         status: "complete",
       },
     });
-  } catch (error) {
-    console.error("Error running test:", error);
 
+    return NextResponse.json({ text: result }, { status: 200 });
+  } catch (error) {
     await prisma.test.update({
       where: {
-        id: test.id,
+        id: testId,
         status: "running",
       },
       data: {
         status: "error",
       },
     });
-  } finally {
-    console.log("Closing browser");
-    close();
+    console.error("Database prisma error:", error);
+    return NextResponse.json({ message: "ERROR" }, { status: 500 });
   }
-}
+};
