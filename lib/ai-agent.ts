@@ -202,7 +202,7 @@ export async function runAIAgent(test: Test) {
       tools,
       messages: [{ role: "user", content: userPrompt }],
       temperature: 0.2, // Slightly higher temperature for more creative problem-solving
-      maxTokens: 8000,  // Increased token limit
+      maxTokens: 20000,  // Increased token limit
       maxSteps: 35,     // Increased max steps
       experimental_output: Output.object({ schema: urlSchema }),
     });
