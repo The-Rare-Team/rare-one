@@ -67,28 +67,6 @@ export default function ProtectedPage() {
     }
   }
 
-  async function handleLaunchBrowser() {
-    try {
-      // Clear any previous messages
-      setMessage(null);
-
-      // Call the server action
-      const { session, liveViewLink } = await startBrowserSession();
-      setLiveViewLink(liveViewLink);
-
-      const result = await launchBrowser(session.id, session.connectUrl);
-
-      if (result.success) {
-        setMessage({ type: "success", text: result.message });
-      } else {
-        setMessage({ type: "error", text: result.message });
-      }
-    } catch (error) {
-      console.error("Error:", error);
-      setMessage({ type: "error", text: "An unexpected error occurred" });
-    }
-  }
-
   if (loading) {
     return <div>Loading...</div>;
   }
@@ -121,15 +99,6 @@ export default function ProtectedPage() {
           </div>
           <SubmitButton />
         </form>
-
-        <div className="w-full">
-          <button
-            onClick={handleLaunchBrowser}
-            className="w-full rounded bg-purple-600 p-2 text-white hover:bg-purple-700"
-          >
-            Launch Browser
-          </button>
-        </div>
       </div>
 
       {/* Right column - Browser View */}
