@@ -1,4 +1,5 @@
 import Browserbase from "@browserbasehq/sdk";
+import { SessionRecording } from "@browserbasehq/sdk/resources/sessions/recording";
 import { experimental_createMCPClient } from "ai";
 import { Experimental_StdioMCPTransport } from "ai/mcp-stdio";
 
@@ -16,6 +17,13 @@ export async function startSession(): Promise<BroswerSession> {
   const liveViewLink = liveViewLinks.debuggerFullscreenUrl;
 
   return { sessionId: session.id, cdpEndpoint: session.connectUrl, liveViewLink };
+}
+
+export async function getReplay({ sessionId }: { sessionId: string }): Promise<SessionRecording[]> {
+  const bb = new Browserbase({ apiKey: process.env.BROWSERBASE_API_KEY });
+  const replay = await bb.sessions.recording.retrieve(sessionId);
+
+  return replay;
 }
 
 export async function connectPlaywrightMCP(cdpEndpoint: string) {

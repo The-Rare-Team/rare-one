@@ -16,6 +16,10 @@ const TestsTable = () => {
       {data.map((test: any) => (
         <div key={test.id} className="mb-4 rounded border hover:bg-gray-50">
           {test.status == "pending" && (
+            <div className="relative mb-1 h-1.5 w-full overflow-hidden rounded-t bg-gray-300"></div>
+          )}
+
+          {test.status == "running" && (
             <div className="relative mb-1 h-1.5 w-full overflow-hidden rounded-t bg-gray-300">
               <div className="animate-indeterminate1 absolute left-0 top-0 h-full bg-orange-500" />
               <div className="animate-indeterminate2 absolute left-0 top-0 h-full bg-orange-500" />
@@ -36,8 +40,14 @@ const TestsTable = () => {
                 <h2 className="text-xl font-bold">{test.name}</h2>
 
                 {test.status == "pending" && (
+                  <Badge variant="default" className="bg-gray-600 text-xs hover:bg-gray-700">
+                    Pending
+                  </Badge>
+                )}
+
+                {test.status == "running" && (
                   <Badge variant="default" className="bg-orange-600 text-xs hover:bg-orange-700">
-                    In Progress
+                    Test In Progress
                   </Badge>
                 )}
 

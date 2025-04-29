@@ -1,27 +1,70 @@
 "use client";
 
 import { Badge } from "@/components/ui/badge";
-import { fetcher, submitter } from "@/utils/api";
+import { Button } from "@/components/ui/button";
+import { fetcher } from "@/utils/api";
+import { useEffect, useRef } from "react";
+import rrwebPlayer from "rrweb-player";
+import "rrweb-player/dist/style.css";
 import useSWR from "swr";
 import useSWRMutation from "swr/mutation";
 
 const TestView = ({ testId }: { testId: string }) => {
   const { data: test, error, isLoading } = useSWR(`/api/tests/${testId}`, fetcher);
-  const { trigger } = useSWRMutation(`/api/tests/${testId}/run`, submitter /** options */);
+  const { data: replayData, trigger } = useSWRMutation(`/api/tests/${testId}/replay`, fetcher);
+  const playerRef = useRef<HTMLDivElement>(null);
 
-  if (test?.status == "pending") {
-    trigger("");
-  }
+  useEffect(() => {
+    if (playerRef.current && replayData.length > 0) {
+      // Initialize the player with your session recording
+      new rrwebPlayer({
+        target: playerRef.current,
+        props: {
+          events: replayData,
+          width: 1024,
+          height: 576,
+        },
+      });
+    }
+  }, [replayData, playerRef]);
 
   if (error) return <div>failed to load</div>;
   if (isLoading) return <div>loading...</div>;
   if (!test) return <div>test not found</div>;
+
+  const startTest = async () => {
+    console.log("Starting test...");
+    const res = await fetch(`/api/tests/${testId}/run`, {
+      method: "POST",
+    });
+
+    if (!res.ok) {
+      const error = new Error("An error occurred while submitting the data.") as Error & {
+        info?: any;
+        status?: number;
+      };
+      error.info = await res.json();
+      error.status = res.status;
+      throw error;
+    } else {
+      return res.json();
+    }
+  };
+
+  const loadReplay = async () => {
+    console.log("Loading session replay...");
+    await trigger();
+  };
 
   // render data
   return (
     <div>
       <div className="mb-4 rounded border hover:bg-gray-50">
         {test.status == "pending" && (
+          <div className="relative mb-1 h-1.5 w-full overflow-hidden rounded-t bg-gray-300"></div>
+        )}
+
+        {test.status == "running" && (
           <div className="relative mb-1 h-1.5 w-full overflow-hidden rounded-t bg-gray-300">
             <div className="animate-indeterminate1 absolute left-0 top-0 h-full bg-orange-500" />
             <div className="animate-indeterminate2 absolute left-0 top-0 h-full bg-orange-500" />
@@ -41,8 +84,14 @@ const TestView = ({ testId }: { testId: string }) => {
             <h2 className="text-xl font-bold">{test.name}</h2>
 
             {test.status == "pending" && (
+              <Badge variant="default" className="bg-gray-600 text-xs hover:bg-gray-700">
+                Pending
+              </Badge>
+            )}
+
+            {test.status == "running" && (
               <Badge variant="default" className="bg-orange-600 text-xs hover:bg-orange-700">
-                In Progress
+                Test In Progress
               </Badge>
             )}
 
@@ -81,7 +130,7 @@ const TestView = ({ testId }: { testId: string }) => {
         </div>
       </div>
       <div>
-        {test.liveViewUrl ? (
+        {test.status == "running" && test.liveViewUrl && (
           <iframe
             src={test.liveViewUrl}
             sandbox="allow-same-origin allow-scripts"
@@ -89,10 +138,33 @@ const TestView = ({ testId }: { testId: string }) => {
             style={{ pointerEvents: "none", width: "100%", height: "100%", minHeight: "700px" }}
             className="rounded-lg"
           />
-        ) : (
+        )}
+
+        {test.status == "pending" && (
           <div className="p-6 text-center">
             <h3 className="text-lg font-medium">Browser View</h3>
             <p className="text-zinc-500 dark:text-zinc-400">Live browser view will appear here after launching</p>
+            {test.status == "pending" && (
+              <Button variant="default" onClick={() => startTest()} className="mt-3 bg-green-700 hover:bg-green-800">
+                Run Test
+              </Button>
+            )}
+          </div>
+        )}
+
+        {test.status == "complete" && !replayData && (
+          <div className="p-6 text-center">
+            <h3 className="text-lg font-medium">Test Complete</h3>
+            <p className="text-zinc-500 dark:text-zinc-400">You can now view the test session replay here.</p>
+            <Button variant="default" onClick={() => loadReplay()} className="mt-3 bg-green-700 hover:bg-green-800">
+              Load Test Replay
+            </Button>
+          </div>
+        )}
+
+        {replayData && (
+          <div>
+            <div ref={playerRef} />
           </div>
         )}
       </div>

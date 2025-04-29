@@ -6,10 +6,16 @@ import { NextRequest, NextResponse } from "next/server";
 export const POST = async function POST(req: NextRequest, { params }: { params: Promise<{ testId: string }> }) {
   const { testId } = await params;
 
+  console.log("Running test with ID:", testId);
+
   try {
-    const test = await prisma.test.findUnique({
+    const test = await prisma.test.update({
       where: {
         id: testId,
+        status: "pending",
+      },
+      data: {
+        status: "running",
       },
     });
 
@@ -42,8 +48,28 @@ async function runTest(test: Test) {
     );
 
     await new Promise((r) => setTimeout(r, 10000));
+
+    await prisma.test.update({
+      where: {
+        id: test.id,
+        status: "running",
+      },
+      data: {
+        status: "complete",
+      },
+    });
   } catch (error) {
     console.error("Error running test:", error);
+
+    await prisma.test.update({
+      where: {
+        id: test.id,
+        status: "running",
+      },
+      data: {
+        status: "error",
+      },
+    });
   } finally {
     console.log("Closing browser");
     close();
