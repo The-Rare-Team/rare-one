@@ -19,7 +19,9 @@ const urlSchema = z.object({
       }),
     )
     .describe("The sequence of actions taken."),
-  stepsSummary: z.string().describe("A concise summary of the steps taken during the test."),
+  stepsSummary: z
+    .array(z.string())
+    .describe("A list of steps taken during the test, with each item representing a distinct step."),
   finalUrl: z.string().url().describe("The final URL after all actions are completed."),
 });
 
@@ -48,7 +50,14 @@ export async function runAIAgent(test: Test) {
          { "action": "click",       "selector": "button#submit"}  // Example including submit
          // …etc…
        ],
-       "stepsSummary": "A concise summary of the steps taken during the test, explaining what was done and why",
+       "stepsSummary": [
+         "Step 1: Navigated to the landing page",
+         "Step 2: Clicked the buy now button",
+         "Step 3: Entered email address",
+         "Step 4: Selected quantity of 2",
+         "Step 5: Pressed PageDown to reveal more content",
+         "Step 6: Clicked the submit button to complete the purchase"
+       ],
        "finalUrl": "<the URL you end up on>"
      }
   `.trim();
@@ -66,7 +75,7 @@ export async function runAIAgent(test: Test) {
      e. Stop **only** when the task is fully complete (e.g., form submitted, confirmation page reached) or no further actions are possible after analyzing the snapshot (and potentially using 'press KeyDown').
 
   3. After your first navigation to the URL, extract a concise description of the site - what it appears to be about based on visible text, headings, images, etc.
-  4. Track all steps taken and create a clear summary of what was accomplished during the test.
+  4. Track all steps taken and create a list of steps, with each entry describing a distinct action taken during the test. Number each step (e.g., "Step 1: Navigated to the landing page").
 
   Finally, emit exactly the JSON schema defined above including "siteDescription", "journey", "stepsSummary" and "finalUrl." Do not include any action types other than navigate, click, type, selectOption, or press.
   `.trim();
@@ -87,7 +96,7 @@ export async function runAIAgent(test: Test) {
     experimental_output: Output.object({ schema: urlSchema }),
   });
 
-  let text, steps, toolCalls, toolResults, output;
+  let text, steps, toolCalls, toolResults, output, reasoning, sources, finishReason, usage;
   try {
     ({
       text,
@@ -95,6 +104,10 @@ export async function runAIAgent(test: Test) {
       toolCalls,
       toolResults,
       experimental_output: output,
+      reasoning,
+      sources,
+      finishReason,
+      usage,
     } = await generateText({
       model: openai("gpt-4.1-mini"), // 'gpt-4o', 'gpt-4.1-nano' ,  'o1-mini-2024-09-12'
       system: systemPrompt,
@@ -105,14 +118,26 @@ export async function runAIAgent(test: Test) {
       maxSteps: 25,
       experimental_output: Output.object({ schema: urlSchema }),
     }));
+
+    // Log additional information from generateText results
+    console.log("=== Model Reasoning ===");
+    console.log(reasoning || "No reasoning provided");
+
+    console.log("=== Finish Reason ===");
+    console.log(finishReason || "No finish reason provided");
+
+    console.log("=== Sources ===");
+    console.log(sources?.length ? sources : "No sources provided");
+
+    console.log("=== Usage Statistics ===");
+    console.log(usage || "No usage statistics provided");
   } finally {
     close();
   }
 
-  console.log("=== raw toolCalls ===", toolCalls);
-  console.log("=== raw toolResults ===", toolResults);
   steps.forEach((step, i) => {
     console.log(`\n--- STEP ${i + 1} (${step.stepType}) ---`);
+    console.log("THE step:", step);
     console.log("finishReason:", step.finishReason);
     console.log("toolCalls:", step.toolCalls);
     console.log("toolResults:", step.toolResults);
@@ -124,7 +149,7 @@ export async function runAIAgent(test: Test) {
   // Log the new fields
   console.log("=== Site Description ===");
   console.log(output?.siteDescription || "No site description provided");
-  
+
   console.log("=== Steps Summary ===");
   console.log(output?.stepsSummary || "No steps summary provided");
 
@@ -139,11 +164,11 @@ export async function runAIAgent(test: Test) {
     finalUrl: finalUrl || null,
     siteDescription: siteDescription || null,
     stepsSummary: stepsSummary || null,
-    journey: journey || []
+    journey: journey || [],
   };
-  
+
   console.log("=== Return Object ===");
   console.log(JSON.stringify(returnObject, null, 2));
-  
+
   return returnObject;
 }
