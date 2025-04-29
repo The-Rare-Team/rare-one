@@ -6,6 +6,7 @@ import { connectPlaywrightMCP } from "@/lib/browser-manager";
 
 // Define the schema for the expected structured output
 const urlSchema = z.object({
+  siteDescription: z.string().describe("A brief description of the site extracted from the landing page."),
   journey: z
     .array(
       z.object({
@@ -18,6 +19,7 @@ const urlSchema = z.object({
       }),
     )
     .describe("The sequence of actions taken."),
+  stepsSummary: z.string().describe("A concise summary of the steps taken during the test."),
   finalUrl: z.string().url().describe("The final URL after all actions are completed."),
 });
 
@@ -36,6 +38,7 @@ export async function runAIAgent(test: Test) {
   7. Repeat until the task is confirmed complete (e.g., seeing 'Thank You', 'Success', 'Complete' text) OR **after thoroughly analyzing the snapshot (and potentially attempting a key press like PageDown), absolutely no further interactive fields OR final submission buttons (like 'Submit', 'Complete', 'Confirm', button[type='submit']) can be found.**
   8. At the end, output **only** this JSON object (no extra text):
      {
+       "siteDescription": "A concise description of the website based on the landing page, including its purpose and main features",
        "journey": [
          { "action": "navigate",    "url": "..."              },
          { "action": "click",       "selector": "#buy-now"    },
@@ -45,6 +48,7 @@ export async function runAIAgent(test: Test) {
          { "action": "click",       "selector": "button#submit"}  // Example including submit
          // …etc…
        ],
+       "stepsSummary": "A concise summary of the steps taken during the test, explaining what was done and why",
        "finalUrl": "<the URL you end up on>"
      }
   `.trim();
@@ -61,7 +65,10 @@ export async function runAIAgent(test: Test) {
      d. Record the step using only the allowed actions in the schema: navigate, click, type, selectOption, press.
      e. Stop **only** when the task is fully complete (e.g., form submitted, confirmation page reached) or no further actions are possible after analyzing the snapshot (and potentially using 'press KeyDown').
 
-  Finally, emit exactly the JSON schema defined above under "journey" and "finalUrl." Do not include any action types other than navigate, click, type, selectOption, or press.
+  3. After your first navigation to the URL, extract a concise description of the site - what it appears to be about based on visible text, headings, images, etc.
+  4. Track all steps taken and create a clear summary of what was accomplished during the test.
+
+  Finally, emit exactly the JSON schema defined above including "siteDescription", "journey", "stepsSummary" and "finalUrl." Do not include any action types other than navigate, click, type, selectOption, or press.
   `.trim();
 
   console.log("Calling generateText with:", {
@@ -114,11 +121,29 @@ export async function runAIAgent(test: Test) {
   // Log the raw output for debugging
   console.log("generateText returned (raw):", JSON.stringify({ text, toolCalls, toolResults, output }, null, 2));
 
+  // Log the new fields
+  console.log("=== Site Description ===");
+  console.log(output?.siteDescription || "No site description provided");
+  
+  console.log("=== Steps Summary ===");
+  console.log(output?.stepsSummary || "No steps summary provided");
+
   // Ensure output exists and has the finalUrl property
   const finalUrl = output?.finalUrl;
   const journey = output?.journey; // You might want to use the journey data too
+  const siteDescription = output?.siteDescription;
+  const stepsSummary = output?.stepsSummary;
 
-  const formattedOutput = finalUrl ? `@${finalUrl}` : "Error: Could not extract final URL";
-
-  return formattedOutput;
+  // Return all the required data instead of just the formatted URL
+  const returnObject = {
+    finalUrl: finalUrl || null,
+    siteDescription: siteDescription || null,
+    stepsSummary: stepsSummary || null,
+    journey: journey || []
+  };
+  
+  console.log("=== Return Object ===");
+  console.log(JSON.stringify(returnObject, null, 2));
+  
+  return returnObject;
 }
