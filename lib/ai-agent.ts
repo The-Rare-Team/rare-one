@@ -26,6 +26,22 @@ async function writeToLogFile(test: Test, content: any) {
   logParts.push(`Test Name: ${test.name || 'Unnamed Test'}`);
   logParts.push(`Description: ${test.description || 'No description'}\n`);
   
+  // Add error information if present
+  if (content.error) {
+    logParts.push(`\n=== ERROR INFORMATION ===`);
+    logParts.push(`Error Type: ${content.error.type || 'Unknown'}`);
+    logParts.push(`Error Message: ${content.error.message || 'No message'}`);
+    
+    if (content.error.retryAttempts) {
+      logParts.push(`Retry Attempts: ${content.error.retryAttempts}`);
+    }
+    
+    if (content.error.details) {
+      logParts.push(`Error Details: ${JSON.stringify(content.error.details, null, 2)}`);
+    }
+    logParts.push(''); // Add empty line
+  }
+  
   // Add sections for different content types
   if (content.extractedData) {
     logParts.push(`\n=== SITE DESCRIPTION ===\n${content.extractedData.siteDescription || 'None'}\n`);
@@ -78,6 +94,22 @@ async function writeToLogFile(test: Test, content: any) {
     });
   }
   
+  // Add rate limit information if present
+  if (content.rateLimitInfo) {
+    logParts.push(`\n\n=== RATE LIMIT INFORMATION ===`);
+    logParts.push(`Total Retry Attempts: ${content.rateLimitInfo.totalRetries || 0}`);
+    
+    if (content.rateLimitInfo.retryEvents && content.rateLimitInfo.retryEvents.length > 0) {
+      logParts.push(`\nRetry Events:`);
+      content.rateLimitInfo.retryEvents.forEach((event: any, idx: number) => {
+        logParts.push(`  Event ${idx + 1}:`);
+        logParts.push(`    Time: ${event.time}`);
+        logParts.push(`    Delay: ${event.delayMs}ms`);
+        logParts.push(`    Reason: ${event.reason || 'Unknown'}`);
+      });
+    }
+  }
+  
   // Add raw data in JSON format at the end for reference
   logParts.push(`\n\n=== RAW DATA ===\n${JSON.stringify(content, null, 2)}`);
   
@@ -111,12 +143,95 @@ const urlSchema = z.object({
   finalUrl: z.string().url().describe("The final URL after all actions are completed."),
 });
 
+// Helper function to implement exponential backoff for API calls
+/**
+ * Executes a function with exponential backoff retry for API rate limit errors.
+ * This specifically handles OpenAI's 429 rate limit errors by:
+ * 1. Detecting rate limit errors through status codes or error messages
+ * 2. Using the server's retry-after header when available
+ * 3. Implementing exponential backoff with a maximum delay cap
+ * 4. Limiting total retry attempts
+ */
+async function withExponentialBackoff<T>(
+  fn: () => Promise<T>,
+  maxRetries = 5,
+  initialDelayMs = 1000,
+  maxDelayMs = 30000,
+  rateLimitInfo?: { totalRetries: number; retryEvents: any[] }
+): Promise<T> {
+  let retries = 0;
+  let delay = initialDelayMs;
+  
+  while (true) {
+    try {
+      return await fn();
+    } catch (error: any) {
+      // Handle different error object structures
+      // The AI SDK can wrap errors in different ways
+      const originalError = error?.lastError || error;
+      
+      // Check if it's a rate limit error (429)
+      const isRateLimit = 
+        originalError?.statusCode === 429 || 
+        originalError?.data?.error?.code === 'rate_limit_exceeded' ||
+        error?.message?.includes('rate limit') ||
+        originalError?.message?.includes('rate limit');
+      
+      if (!isRateLimit || retries >= maxRetries) {
+        // Rethrow if not a rate limit error or if we've exceeded max retries
+        console.log(`Error not retryable or max retries (${maxRetries}) exceeded:`, error);
+        throw error;
+      }
+      
+      // Extract retry-after from headers if available
+      let retryAfterMs = delay;
+      
+      // Try different paths to find the retry-after value
+      const headers = originalError?.responseHeaders || {};
+      
+      if (headers['retry-after-ms']) {
+        retryAfterMs = Number(headers['retry-after-ms']);
+      } else if (headers['retry-after']) {
+        retryAfterMs = Number(headers['retry-after']) * 1000;
+      } else if (originalError?.data?.error?.message) {
+        // Try to extract seconds from the error message
+        const match = originalError.data.error.message.match(/try again in (\d+\.?\d*)s/i);
+        if (match && match[1]) {
+          retryAfterMs = Number(match[1]) * 1000;
+        }
+      }
+      
+      // Track retry information if rateLimitInfo is provided
+      if (rateLimitInfo) {
+        rateLimitInfo.totalRetries++;
+        rateLimitInfo.retryEvents.push({
+          time: new Date().toISOString(),
+          delayMs: retryAfterMs,
+          reason: originalError?.data?.error?.message || error?.message || 'Rate limit exceeded',
+          attempt: retries + 1
+        });
+      }
+      
+      // Log the retry attempt with detailed information
+      console.log(`Rate limit hit. Retrying in ${retryAfterMs/1000}s (attempt ${retries + 1}/${maxRetries})`);
+      console.log(`Rate limit details: ${originalError?.data?.error?.message || 'No detailed message'}`);
+      
+      // Wait for the specified delay
+      await new Promise(resolve => setTimeout(resolve, retryAfterMs));
+      
+      // Increase the delay for the next retry (exponential backoff)
+      delay = Math.min(delay * 2, maxDelayMs);
+      retries++;
+    }
+  }
+}
+
 export async function runAIAgent(test: Test) {
   const url = test.url;
   const { tools, close } = await connectPlaywrightMCP(test.cdpEndpoint);
 
   const systemPrompt = `
-  You are a senior QA engineer and Playwright MCP specialist. Your job is to drive an autonomous “expert tester” that uses only the Playwright MCP tools provided. Your main goal is to complete any form submission journey from start to finish, calling exactly one browser tool at a time, then waiting 1 second, then taking a new snapshot before any further action.
+  You are a senior QA engineer and Playwright MCP specialist. Your job is to drive an autonomous "expert tester" that uses only the Playwright MCP tools provided. Your main goal is to complete any form submission journey from start to finish, calling exactly one browser tool at a time, then waiting 1 second, then taking a new snapshot before any further action.
   
   FORM COMPLETION STRATEGY:
   1. Start by taking an initial snapshot to identify the type of form.
@@ -189,22 +304,32 @@ export async function runAIAgent(test: Test) {
       system: systemPrompt,
       user: userPrompt,
     },
+    rateLimitInfo: {
+      totalRetries: 0,
+      retryEvents: []
+    }
   };
 
   let text, steps, toolCalls, toolResults, output, reasoning, sources, finishReason, usage;
   try {
-    // Store the complete result first
-    const result = await generateText({
-      model: openai("gpt-4.1-mini" ), // Upgraded to more capable model "gpt-4o"
-      system: systemPrompt,
-      tools,
-      messages: [{ role: "user", content: userPrompt }],
-      temperature: 0.1, // Slightly higher temperature for more creative problem-solving
-      maxTokens: 20000,  // Increased token limit
-      maxSteps: 35,     // Increased max steps
-      experimental_continueSteps: true,
-      experimental_output: Output.object({ schema: urlSchema }),
-    });
+    // Create a counter for retries that the withExponentialBackoff function can modify
+    const retryCounter = { count: 0, events: [] };
+
+    // Store the complete result first - Now with exponential backoff
+    const result = await withExponentialBackoff(async () => {
+      console.log("Attempting generateText call...");
+      return generateText({
+        model: openai("gpt-4.1-mini"), // Upgraded to more capable model "gpt-4o"
+        system: systemPrompt,
+        tools,
+        messages: [{ role: "user", content: userPrompt }],
+        temperature: 0.1, 
+        maxTokens: 20000,
+        maxSteps: 35,
+        experimental_continueSteps: true,
+        experimental_output: Output.object({ schema: urlSchema }),
+      });
+    }, 5, 2000, 60000, fullLog.rateLimitInfo);
 
     // Add to log collection
     fullLog.rawResult = result;
@@ -243,6 +368,22 @@ export async function runAIAgent(test: Test) {
     console.log("=== Usage Statistics ===");
     console.log(usage || "No usage statistics provided");
 
+  } catch (error) {
+    console.error("Error during AI agent execution:", error);
+    
+    // Add error information to the log
+    fullLog.error = {
+      type: typeof error === 'object' && error !== null ? (error as any).name || "Unknown" : "Unknown",
+      message: typeof error === 'object' && error !== null ? (error as any).message || "No message" : String(error),
+      details: error
+    };
+
+    // Write error to log file
+    const logFilePath = await writeToLogFile(test, fullLog);
+    console.log(`Error results written to: ${logFilePath}`);
+    
+    // Rethrow the error after logging
+    throw error;
   } finally {
     close();
   }
