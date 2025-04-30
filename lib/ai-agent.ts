@@ -203,7 +203,7 @@ export async function runAIAgent(test: Test) {
       },
     ],
     temperature: 0.2,  // Slightly higher temperature for more creative problem-solving
-    maxTokens: 8000,   // Increased token limit for more complex forms
+    maxTokens: 20000,   // Increased token limit for more complex forms
     maxSteps: 35,      // Increased max steps for multi-page forms
     experimental_output: Output.object({ schema: urlSchema }),
   });
