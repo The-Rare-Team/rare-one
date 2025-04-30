@@ -55,6 +55,29 @@ async function writeToLogFile(test: Test, content: any) {
     });
   }
   
+  // Add detailed step execution information
+  if (content.stepDetails && content.stepDetails.length > 0) {
+    logParts.push(`\n\n=== DETAILED STEP EXECUTION ===`);
+    content.stepDetails.forEach((stepDetail: any) => {
+      logParts.push(`\n--- STEP ${stepDetail.stepNumber} (${stepDetail.stepType}) ---`);
+      logParts.push(`  Finish Reason: ${JSON.stringify(stepDetail.finishReason)}`);
+      
+      if (stepDetail.toolCalls && stepDetail.toolCalls.length > 0) {
+        logParts.push(`  Tool Calls:`);
+        stepDetail.toolCalls.forEach((call: any, idx: number) => {
+          logParts.push(`    Call ${idx + 1}: ${call.name} - ${JSON.stringify(call.args)}`);
+        });
+      }
+      
+      if (stepDetail.toolResults && stepDetail.toolResults.length > 0) {
+        logParts.push(`  Tool Results:`);
+        stepDetail.toolResults.forEach((result: any, idx: number) => {
+          logParts.push(`    Result ${idx + 1}: ${JSON.stringify(result)}`);
+        });
+      }
+    });
+  }
+  
   // Add raw data in JSON format at the end for reference
   logParts.push(`\n\n=== RAW DATA ===\n${JSON.stringify(content, null, 2)}`);
   
@@ -100,10 +123,10 @@ export async function runAIAgent(test: Test) {
   2. Systematically identify ALL required form fields by looking for '*' markers, 'required' attributes, or common patterns
   3. Fill form fields with appropriate valid test data:
      - Use "amandazown@gmail.com" for email fields
-     - Use "Test User" for name fields
+     - Use "Dan Koe" for name fields
      - Use "210 Fort York Blvd, ON, M5V4A1" for address fields
      - Use "647-904-1623" for phone fields
-     - Use test credit card "4242 4242 4242 4242" with future expiry "12/28" and "123" CVV for payment forms
+     - Use test credit card "4242 4242 4242 4242" with future expiry "12/34" and "567" CVV for payment forms
      - For other fields, provide relevant data that matches the expected format
   4. IMPORTANT: After filling fields in a section, look for "Next", "Continue", "Submit" or similar buttons BEFORE attempting to fill more fields
   5. VALIDATION HANDLING: If you encounter validation errors after clicking Next/Submit:
@@ -159,7 +182,6 @@ export async function runAIAgent(test: Test) {
      }
   `.trim();
 
-  // You might also refine the user prompt slightly if needed, but the system prompt usually has more impact on the agent's behavior.
   const userPrompt = `
   Given URL: ${url}
 
@@ -172,7 +194,7 @@ export async function runAIAgent(test: Test) {
      e. Use strategic actions like PageDown if content might be below visible area
      f. Record each action with appropriate details
      g. IMPORTANT: Always take a new snapshot after every action to avoid stale references
-     h. Use browser_wait with 1000-2000ms after interactions with dynamic content
+     h. Use browser_wait with 1 after interactions with dynamic content
 
   3. After your first navigation to the URL, extract a concise description of the site.
   4. Track all steps taken and create a clear summary.
@@ -229,9 +251,10 @@ export async function runAIAgent(test: Test) {
       system: systemPrompt,
       tools,
       messages: [{ role: "user", content: userPrompt }],
-      temperature: 0.2, // Slightly higher temperature for more creative problem-solving
+      temperature: 0.1, // Slightly higher temperature for more creative problem-solving
       maxTokens: 20000,  // Increased token limit
       maxSteps: 35,     // Increased max steps
+      experimental_continueSteps: true,
       experimental_output: Output.object({ schema: urlSchema }),
     });
 
@@ -285,13 +308,14 @@ export async function runAIAgent(test: Test) {
     console.log("toolCalls:", step.toolCalls);
     console.log("toolResults:", step.toolResults);
     
-    // Add to log collection
+    // Add to log collection with more detailed information
     fullLog.stepDetails.push({
       stepNumber: i + 1,
       stepType: step.stepType,
       finishReason: step.finishReason,
       toolCalls: step.toolCalls,
       toolResults: step.toolResults,
+      fullStepDetails: step // Include the full step object for comprehensive logging
     });
   });
 
