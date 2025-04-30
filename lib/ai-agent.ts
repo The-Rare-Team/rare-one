@@ -99,7 +99,7 @@ export async function runAIAgent(test: Test) {
   1. Start by taking a snapshot and identifying the type of form (authentication, signup, payment, survey, etc.)
   2. Systematically identify ALL required form fields by looking for '*' markers, 'required' attributes, or common patterns
   3. Fill form fields with appropriate valid test data:
-     - Use "adoghri9@gmail.com" for email fields
+     - Use "amandazown@gmail.com" for email fields
      - Use "Test User" for name fields
      - Use "210 Fort York Blvd, ON, M5V4A1" for address fields
      - Use "647-904-1623" for phone fields
@@ -115,9 +115,17 @@ export async function runAIAgent(test: Test) {
   ACTION SEQUENCE:
   1. Snapshot the page and enumerate all interactive elements (links, buttons, form fields, dropdowns, etc.) visible
   2. Choose the highest-priority actions that move toward form completion
-  3. After clicking Next/Continue/Submit buttons, ALWAYS take a new snapshot and verify progress before proceeding
+  3. After EVERY interaction with the page (clicks, typing, etc.), ALWAYS take a new snapshot to get fresh references
   4. If the form has multiple pages/steps, identify the current step and complete it before moving to the next
   5. When you can no longer find form fields or submission buttons AND you see success indicators, conclude the journey
+
+  DEALING WITH DYNAMIC CONTENT:
+  1. After each important interaction (clicking, typing, etc.), use browser_wait tool with 1000ms to allow the page to update
+  2. Always follow any interaction with a new browser_snapshot to get fresh element references
+  3. If you encounter a "stale aria-ref" error, it means the page structure has changed:
+     - Take a new snapshot immediately
+     - Locate the element again using the fresh snapshot
+     - Retry your interaction with the updated reference
 
   ADVANCED TECHNIQUES:
   1. For multi-page forms, track your progress through the form steps
@@ -125,6 +133,15 @@ export async function runAIAgent(test: Test) {
   3. If a field isn't immediately interactable, try clicking its label first
   4. Watch for dynamically appearing fields after selections are made
   5. Use keyboard press actions (Tab, PageDown) strategically if content appears to be below the visible area
+  6. IMPORTANT: Always create a new snapshot after each action to prevent stale references
+  7. Use the browser_wait tool whenever there might be dynamic content loading or AJAX calls
+
+  TOOL USAGE PATTERNS:
+  1. browser_navigate: Use to navigate to URLs
+  2. browser_snapshot: Use after EVERY action to get updated page structure
+  3. browser_click: Use to click on buttons, links, checkboxes, radio buttons
+  4. browser_type: Use to enter text into input fields
+  5. browser_wait: Use after interactions to allow time for the page to update (typically 1000-2000ms)
 
   At the end, output this JSON object (no extra text):
      {
@@ -154,12 +171,23 @@ export async function runAIAgent(test: Test) {
      d. For multi-step forms: track current step and progress methodically
      e. Use strategic actions like PageDown if content might be below visible area
      f. Record each action with appropriate details
+     g. IMPORTANT: Always take a new snapshot after every action to avoid stale references
+     h. Use browser_wait with 1000-2000ms after interactions with dynamic content
 
   3. After your first navigation to the URL, extract a concise description of the site.
   4. Track all steps taken and create a clear summary.
   5. Stop only when:
      - A form is successfully submitted (confirmation page or success message appears)
      - Or no further meaningful interactions are possible after thorough analysis
+
+  RECOMMENDED SEQUENCE:
+  1. browser_navigate to the URL
+  2. browser_snapshot to analyze the page
+  3. For each interaction:
+     - browser_click or browser_type to interact with an element
+     - browser_wait for 1000ms to allow the page to update
+     - browser_snapshot to get fresh references
+  4. Repeat until form is submitted or journey is complete
 
   Finally, emit exactly the JSON schema with "siteDescription", "journey", "stepsSummary" and "finalUrl."
   `.trim();
