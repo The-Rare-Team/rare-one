@@ -26,10 +26,14 @@ export async function getReplay({ sessionId }: { sessionId: string }): Promise<S
   return replay;
 }
 
-export async function connectPlaywrightMCP(cdpEndpoint: string) {
+export async function connectPlaywrightMCP(cdpEndpoint?: string | null) {
+  const args = ["./node_modules/@playwright/mcp/cli.js"];
+  if (cdpEndpoint) {
+    args.push("--cdp-endpoint", cdpEndpoint);
+  }
   const transport = new Experimental_StdioMCPTransport({
     command: "node",
-    args: ["./node_modules/@playwright/mcp/cli.js", "--cdp-endpoint", cdpEndpoint],
+    args,
   });
 
   const client = await experimental_createMCPClient({ transport });

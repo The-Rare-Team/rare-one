@@ -49,16 +49,19 @@ export const POST = async function POST(req: NextRequest) {
   //await new Promise(r => setTimeout(r, 5000)); // simulate a delay
 
   try {
-    const session = await startSession();
+    let session;
+    if (process.env.BROWSER_MODE != "local") {
+      session = await startSession();
+    }
     const tests = await prisma.test.create({
       data: {
         name: data.name,
         url: data.url || undefined,
         description: data.description || undefined,
         status: data.status || undefined,
-        liveViewUrl: session.liveViewLink,
-        sessionId: session.sessionId,
-        cdpEndpoint: session.cdpEndpoint,
+        liveViewUrl: session?.liveViewLink || undefined,
+        sessionId: session?.sessionId || undefined,
+        cdpEndpoint: session?.cdpEndpoint || undefined,
       },
     });
 

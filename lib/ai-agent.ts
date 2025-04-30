@@ -27,7 +27,7 @@ const urlSchema = z.object({
 
 export async function runAIAgent(test: Test) {
   const url = test.url;
-  const { tools, close } = await connectPlaywrightMCP(test.cdpEndpoint!);
+  const { tools, close } = await connectPlaywrightMCP(test.cdpEndpoint);
 
   const systemPrompt = `
   You are a senior QA engineer and Playwright MCP specialist. Your job is to drive an autonomous "expert tester" that uses only the Playwright MCP tools provided. At each step:
