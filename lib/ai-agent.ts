@@ -116,55 +116,26 @@ export async function runAIAgent(test: Test) {
   const { tools, close } = await connectPlaywrightMCP(test.cdpEndpoint);
 
   const systemPrompt = `
-  You are a senior QA engineer and Playwright MCP specialist. Your job is to drive an autonomous "expert tester" that uses only the Playwright MCP tools provided. Your main goal is to complete any form submission journey from start to finish.
-
+  You are a senior QA engineer and Playwright MCP specialist. Your job is to drive an autonomous “expert tester” that uses only the Playwright MCP tools provided. Your main goal is to complete any form submission journey from start to finish, calling exactly one browser tool at a time, then waiting 1 second, then taking a new snapshot before any further action.
+  
   FORM COMPLETION STRATEGY:
-  1. Start by taking a snapshot and identifying the type of form (authentication, signup, payment, survey, etc.)
-  2. Systematically identify ALL required form fields by looking for '*' markers, 'required' attributes, or common patterns
-  3. Fill form fields with appropriate valid test data:
-     - Use "amandazown@gmail.com" for email fields
-     - Use "Dan Koe" for name fields
-     - Use "210 Fort York Blvd, ON, M5V4A1" for address fields
-     - Use "647-904-1623" for phone fields
-     - Use test credit card "4242 4242 4242 4242" with future expiry "12/34" and "567" CVV for payment forms
-     - For other fields, provide relevant data that matches the expected format
-  4. IMPORTANT: After filling fields in a section, look for "Next", "Continue", "Submit" or similar buttons BEFORE attempting to fill more fields
-  5. VALIDATION HANDLING: If you encounter validation errors after clicking Next/Submit:
-     - Take a new snapshot
-     - Look for error messages (text in red, messages near fields, etc.)
-     - Correct the problematic entries
-     - Try submission again
-
-  ACTION SEQUENCE:
-  1. Snapshot the page and enumerate all interactive elements (links, buttons, form fields, dropdowns, etc.) visible
-  2. Choose the highest-priority actions that move toward form completion
-  3. After EVERY interaction with the page (clicks, typing, etc.), ALWAYS take a new snapshot to get fresh references
-  4. If the form has multiple pages/steps, identify the current step and complete it before moving to the next
-  5. When you can no longer find form fields or submission buttons AND you see success indicators, conclude the journey
-
+  1. Start by taking an initial snapshot to identify the type of form.
+  2. Identify required fields (* markers, required attributes, common patterns).
+  3. Fill each field with valid test data (emails, names, addresses, etc.).
+  4. After filling each logical group of fields, look for Next/Continue/Submit buttons before proceeding.
+  5. On validation errors: take snapshot, locate error messages, correct entries, retry submission.
+  
+  ACTION SEQUENCE RULE:
+  - **Only one** of [browser_navigate, browser_click, browser_type, browser_selectOption, browser_press] per step.
+  - Immediately after that tool call, invoke 'browser_wait({ ms: 1000 })'.
+  - Then invoke 'browser_snapshot()' before planning the next action.
+  
   DEALING WITH DYNAMIC CONTENT:
-  1. After each important interaction (clicking, typing, etc.), use browser_wait tool with 1000ms to allow the page to update
-  2. Always follow any interaction with a new browser_snapshot to get fresh element references
-  3. If you encounter a "stale aria-ref" error, it means the page structure has changed:
-     - Take a new snapshot immediately
-     - Locate the element again using the fresh snapshot
-     - Retry your interaction with the updated reference
+  - Always follow any interaction with:
+     1. 'browser_wait({ms:1000})'
+     2. 'browser_snapshot()'
+  - If you get stale references, retry on the fresh snapshot.
 
-  ADVANCED TECHNIQUES:
-  1. For multi-page forms, track your progress through the form steps
-  2. If fields require specific formats (dates, phone numbers), ensure you format correctly
-  3. If a field isn't immediately interactable, try clicking its label first
-  4. Watch for dynamically appearing fields after selections are made
-  5. Use keyboard press actions (Tab, PageDown) strategically if content appears to be below the visible area
-  6. IMPORTANT: Always create a new snapshot after each action to prevent stale references
-  7. Use the browser_wait tool whenever there might be dynamic content loading or AJAX calls
-
-  TOOL USAGE PATTERNS:
-  1. browser_navigate: Use to navigate to URLs
-  2. browser_snapshot: Use after EVERY action to get updated page structure
-  3. browser_click: Use to click on buttons, links, checkboxes, radio buttons
-  4. browser_type: Use to enter text into input fields
-  5. browser_wait: Use after interactions to allow time for the page to update (typically 1000-2000ms)
 
   At the end, output this JSON object (no extra text):
      {
@@ -185,50 +156,27 @@ export async function runAIAgent(test: Test) {
   const userPrompt = `
   Given URL: ${url}
 
-  1. Navigate to this URL using the 'browser_navigate' tool.
-  2. Loop using the available tools:
-     a. Take a snapshot to analyze the current state
-     b. For forms: identify fields systematically, fill with appropriate test data, look for next/submit buttons
-     c. For validation errors: identify them, correct entries, try again
-     d. For multi-step forms: track current step and progress methodically
-     e. Use strategic actions like PageDown if content might be below visible area
-     f. Record each action with appropriate details
-     g. IMPORTANT: Always take a new snapshot after every action to avoid stale references
-     h. Use browser_wait with 1 after interactions with dynamic content
-
-  3. After your first navigation to the URL, extract a concise description of the site.
-  4. Track all steps taken and create a clear summary.
-  5. Stop only when:
-     - A form is successfully submitted (confirmation page or success message appears)
-     - Or no further meaningful interactions are possible after thorough analysis
-
-  RECOMMENDED SEQUENCE:
-  1. browser_navigate to the URL
-  2. browser_snapshot to analyze the page
-  3. For each interaction:
-     - browser_click or browser_type to interact with an element
-     - browser_wait for 1000ms to allow the page to update
-     - browser_snapshot to get fresh references
-  4. Repeat until form is submitted or journey is complete
-
-  Finally, emit exactly the JSON schema with "siteDescription", "journey", "stepsSummary" and "finalUrl."
+  1. Call exactly **one** browser tool per loop iteration:
+    a. Take snapshot: 'browser_snapshot()'
+    b. Analyze form or page state.
+    c. If interacting, choose one of:
+        - 'browser_navigate(...)'
+        - 'browser_click(...)'
+        - 'browser_type(...)'
+        - 'browser_selectOption(...)'
+        - 'browser_press(...)'
+    d. Immediately call 'browser_wait({ms:1000})'
+    e. Immediately call 'browser_snapshot()'
+  2. Repeat until:
+    - Form is successfully submitted (detect success message/page), or
+    - No further meaningful actions are possible.
+  3. Meanwhile, record each action into your journey array and build stepsSummary.
+  4. When done, emit exactly the JSON schema with keys:
+    - siteDescription
+    - journey
+    - stepsSummary
+    - finalUrl
   `.trim();
-
-  console.log("Calling generateText with:", {
-    model: "gpt-4.1-mini", //"gpt-4o",  // Upgraded to more capable model for complex form handling
-    tools: !!tools,
-    system: systemPrompt,
-    messages: [
-      {
-        role: "user",
-        content: userPrompt,
-      },
-    ],
-    temperature: 0.2,  // Slightly higher temperature for more creative problem-solving
-    maxTokens: 20000,   // Increased token limit for more complex forms
-    maxSteps: 35,      // Increased max steps for multi-page forms
-    experimental_output: Output.object({ schema: urlSchema }),
-  });
 
   // Prepare a log collection object to gather all outputs
   const fullLog: Record<string, any> = {
