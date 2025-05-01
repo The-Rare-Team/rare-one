@@ -24,6 +24,9 @@ model ExploreRun {
   liveViewUrl String?
   sessionId   String?
   cdpEndpoint String?
+  siteDescription String?
+  stepsSummary Json?
+  steps       Json?
   status      String   @default("pending")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

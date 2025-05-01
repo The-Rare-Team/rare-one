@@ -27,6 +27,9 @@ export const POST = async function POST(req: NextRequest, { params }: { params: 
       },
       data: {
         status: "complete",
+        siteDescription: result.siteDescription,
+        stepsSummary: result.stepsSummary,
+        steps: result.journey,
       },
     });
 

@@ -45,7 +45,7 @@ const ExploreRunView = ({ id }: { id: string }) => {
   useEffect(() => {
     if (!exploreRun) return;
     if (exploreRun.status == "pending") {
-      startTest();
+      startExploreRun();
       mutate(`/api/explore_runs/${id}`); // force revalidation of the test data
     }
   }, [exploreRun]);
@@ -54,7 +54,7 @@ const ExploreRunView = ({ id }: { id: string }) => {
   if (isLoading) return <div>loading...</div>;
   if (!exploreRun) return <div>test not found</div>;
 
-  const startTest = async () => {
+  const startExploreRun = async () => {
     console.log("Starting explore_run...");
     const res = await fetch(`/api/explore_runs/${id}/run`, {
       method: "POST",
@@ -113,7 +113,7 @@ const ExploreRunView = ({ id }: { id: string }) => {
 
             {exploreRun.status == "running" && (
               <Badge variant="default" className="bg-orange-600 text-xs hover:bg-orange-700">
-                Generation In Progress
+                In Progress
               </Badge>
             )}
 
@@ -129,6 +129,7 @@ const ExploreRunView = ({ id }: { id: string }) => {
           </div>
 
           <p className="pb-2 text-slate-500">{exploreRun.description}</p>
+          <p className="pb-2 text-slate-500">{exploreRun.siteDescription}</p>
           <div className="grid grid-cols-2 gap-x-2">
             <div>
               <p>
@@ -167,7 +168,11 @@ const ExploreRunView = ({ id }: { id: string }) => {
             <h3 className="text-lg font-medium">Browser View</h3>
             <p className="text-zinc-500 dark:text-zinc-400">Live browser view will appear here after launching</p>
             {exploreRun.status == "pending" && (
-              <Button variant="default" onClick={() => startTest()} className="mt-3 bg-blue-700 hover:bg-blue-800">
+              <Button
+                variant="default"
+                onClick={() => startExploreRun()}
+                className="mt-3 bg-blue-700 hover:bg-blue-800"
+              >
                 Run Generation
               </Button>
             )}
