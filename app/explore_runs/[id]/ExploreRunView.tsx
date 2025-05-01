@@ -1,5 +1,6 @@
 "use client";
 
+import { Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { fetcher } from "@/utils/api";
@@ -88,8 +89,8 @@ const ExploreRunView = ({ id }: { id: string }) => {
 
         {exploreRun.status == "running" && (
           <div className="relative mb-1 h-1.5 w-full overflow-hidden rounded-t bg-gray-300">
-            <div className="animate-indeterminate1 absolute left-0 top-0 h-full bg-orange-500" />
-            <div className="animate-indeterminate2 absolute left-0 top-0 h-full bg-orange-500" />
+            <div className="animate-indeterminate1 absolute top-0 left-0 h-full bg-orange-500" />
+            <div className="animate-indeterminate2 absolute top-0 left-0 h-full bg-orange-500" />
           </div>
         )}
 
@@ -184,11 +185,12 @@ const ExploreRunView = ({ id }: { id: string }) => {
             <h3 className="text-lg font-medium">Generation Complete</h3>
             <p className="text-zinc-500 dark:text-zinc-400">You can now view the replay here.</p>
             <Button
-              isLoading={isLoadingReplay}
+              disabled={isLoadingReplay}
               variant="default"
               onClick={() => loadReplay()}
               className="mt-3 bg-green-700 hover:bg-green-800"
             >
+              {isLoadingReplay && <Loader2 className="animate-spin" />}
               Load Replay
             </Button>
           </div>
