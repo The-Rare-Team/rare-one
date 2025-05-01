@@ -2,15 +2,15 @@ import { runAIAgent } from "@/lib/ai-agent";
 import { prisma } from "@/utils/db";
 import { NextRequest, NextResponse } from "next/server";
 
-export const POST = async function POST(req: NextRequest, { params }: { params: Promise<{ testId: string }> }) {
-  const { testId } = await params;
+export const POST = async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
 
-  console.log("Running test with ID:", testId);
+  console.log("Running test with ID:", id);
 
   try {
-    const test = await prisma.test.update({
+    const test = await prisma.exploreRun.update({
       where: {
-        id: testId,
+        id,
         status: "pending",
       },
       data: {
@@ -20,9 +20,9 @@ export const POST = async function POST(req: NextRequest, { params }: { params: 
 
     const result = await runAIAgent(test!);
 
-    await prisma.test.update({
+    await prisma.exploreRun.update({
       where: {
-        id: test.id,
+        id,
         status: "running",
       },
       data: {
@@ -32,9 +32,9 @@ export const POST = async function POST(req: NextRequest, { params }: { params: 
 
     return NextResponse.json({ text: result }, { status: 200 });
   } catch (error) {
-    await prisma.test.update({
+    await prisma.exploreRun.update({
       where: {
-        id: testId,
+        id,
         status: "running",
       },
       data: {

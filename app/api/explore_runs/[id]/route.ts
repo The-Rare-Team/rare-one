@@ -1,16 +1,12 @@
-import { connectPlaywrightMCP } from "@/lib/browser-manager";
-import { Test } from "@/lib/generated/prisma/client";
 import { prisma } from "@/utils/db";
 import { NextRequest, NextResponse } from "next/server";
 
-export async function GET(req: Request, { params }: { params: Promise<{ testId: string }> }) {
-  const { testId } = await params;
+export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
 
   try {
-    const test = await prisma.test.findUnique({
-      where: {
-        id: testId,
-      },
+    const test = await prisma.exploreRun.findUnique({
+      where: { id },
     });
 
     return NextResponse.json(test, { status: 200 });
@@ -26,7 +22,7 @@ export const POST = async function POST(req: NextRequest) {
   //await new Promise(r => setTimeout(r, 5000)); // simulate a delay
 
   try {
-    const tests = await prisma.test.create({
+    const tests = await prisma.exploreRun.create({
       data: {
         name: data.name,
         url: data.url || undefined,

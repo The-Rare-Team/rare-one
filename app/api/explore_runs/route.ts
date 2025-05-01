@@ -30,7 +30,7 @@ export const GET = async function GET(req: NextRequest) {
   //return NextResponse.json(data_mock, { status: 200 });
 
   try {
-    const tests = await prisma.test.findMany({
+    const tests = await prisma.exploreRun.findMany({
       orderBy: {
         createdAt: "desc",
       },
@@ -53,7 +53,7 @@ export const POST = async function POST(req: NextRequest) {
     if (process.env.BROWSER_MODE != "local") {
       session = await startSession();
     }
-    const tests = await prisma.test.create({
+    const tests = await prisma.exploreRun.create({
       data: {
         name: data.name,
         url: data.url || undefined,

@@ -27,7 +27,7 @@ interface Inputs {
   description?: string;
 }
 
-export function TestsAddButton() {
+export function NewExploreRunButton() {
   const router = useRouter();
   const [open, setOpen] = React.useState(false);
 
@@ -38,7 +38,7 @@ export function TestsAddButton() {
     formState: { errors },
   } = useForm<Inputs>();
 
-  const { trigger } = useSWRMutation("/api/tests", submitter /** options */);
+  const { trigger } = useSWRMutation("/api/explore_runs", submitter /** options */);
 
   const onSubmit: SubmitHandler<Inputs> = async (data) => {
     console.log("submitting form data", data);
@@ -46,10 +46,10 @@ export function TestsAddButton() {
     try {
       const res = await trigger(JSON.stringify(data));
 
-      toast.success("Test created!");
+      toast.success("Test generation started!");
       setOpen(false); // close the dialog
       reset(); // reset the form fields
-      router.push(`/tests/${res.id}`); // redirect to the new test page
+      router.push(`/explore_runs/${res.id}`); // redirect to the new test page
     } catch (error) {
       console.error("Error creating test:", error);
       toast.error("Error creating test.");
@@ -61,27 +61,30 @@ export function TestsAddButton() {
       <DialogTrigger asChild>
         <Button variant="default" className="bg-green-700 hover:bg-green-800">
           <PlusIcon className="mr-1 inline size-5" />
-          Create New Test
+          Generate Tests
         </Button>
       </DialogTrigger>
       <DialogContent className="">
         <form onSubmit={handleSubmit(onSubmit)}>
           <DialogHeader>
-            <DialogTitle>New Test</DialogTitle>
-            <DialogDescription>Enter information about the test you want to create.</DialogDescription>
+            <DialogTitle>Generate Tests</DialogTitle>
+            <DialogDescription>
+              Our AI agent will explore your website like a real user and generate browser tests using Playwright for
+              you. The process may take a several minutes.
+            </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-x-4">
               <div className="col-span-1 text-right">
                 <Label htmlFor="name" className="text-right">
-                  Test Name<span className="pl-0.5 text-red-500">*</span>
+                  Name<span className="pl-0.5 text-red-500">*</span>
                 </Label>
               </div>
               <div className="col-span-3">
                 <Input
                   id="name"
                   className="col-span-3"
-                  placeholder="Main user journey"
+                  placeholder="Any name for your reference"
                   {...register("name", { required: "This field is required." })}
                 />
               </div>
@@ -137,7 +140,7 @@ export function TestsAddButton() {
             </div>
           </div>
           <DialogFooter>
-            <Button type="submit">Create Test</Button>
+            <Button type="submit">Generate Now</Button>
           </DialogFooter>
         </form>
       </DialogContent>

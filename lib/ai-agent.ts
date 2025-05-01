@@ -8,56 +8,56 @@ import * as path from "path";
 
 // Helper function to write content to file
 async function writeToLogFile(test: Test, content: any) {
-  const timestamp = new Date().toISOString().replace(/:/g, '-');
-  const testId = test.id || 'unknown';
-  const filePath = path.join(process.cwd(), 'logs', `test-${testId}-${timestamp}.txt`);
-  
+  const timestamp = new Date().toISOString().replace(/:/g, "-");
+  const testId = test.id || "unknown";
+  const filePath = path.join(process.cwd(), "logs", `test-${testId}-${timestamp}.txt`);
+
   // Ensure logs directory exists
-  await fs.mkdir(path.join(process.cwd(), 'logs'), { recursive: true });
-  
+  await fs.mkdir(path.join(process.cwd(), "logs"), { recursive: true });
+
   // Create a formatted log with clear sections
   const logParts = [];
-  
+
   // Add a header
   logParts.push(`=== TEST RESULTS: ${testId} (${new Date().toISOString()}) ===\n`);
-  
+
   // Add test info
-  logParts.push(`URL: ${test.url || 'No URL provided'}`);
-  logParts.push(`Test Name: ${test.name || 'Unnamed Test'}`);
-  logParts.push(`Description: ${test.description || 'No description'}\n`);
-  
+  logParts.push(`URL: ${test.url || "No URL provided"}`);
+  logParts.push(`Test Name: ${test.name || "Unnamed Test"}`);
+  logParts.push(`Description: ${test.description || "No description"}\n`);
+
   // Add error information if present
   if (content.error) {
     logParts.push(`\n=== ERROR INFORMATION ===`);
-    logParts.push(`Error Type: ${content.error.type || 'Unknown'}`);
-    logParts.push(`Error Message: ${content.error.message || 'No message'}`);
-    
+    logParts.push(`Error Type: ${content.error.type || "Unknown"}`);
+    logParts.push(`Error Message: ${content.error.message || "No message"}`);
+
     if (content.error.retryAttempts) {
       logParts.push(`Retry Attempts: ${content.error.retryAttempts}`);
     }
-    
+
     if (content.error.details) {
       logParts.push(`Error Details: ${JSON.stringify(content.error.details, null, 2)}`);
     }
-    logParts.push(''); // Add empty line
+    logParts.push(""); // Add empty line
   }
-  
+
   // Add sections for different content types
   if (content.extractedData) {
-    logParts.push(`\n=== SITE DESCRIPTION ===\n${content.extractedData.siteDescription || 'None'}\n`);
-    
+    logParts.push(`\n=== SITE DESCRIPTION ===\n${content.extractedData.siteDescription || "None"}\n`);
+
     logParts.push(`\n=== STEPS SUMMARY ===`);
     if (Array.isArray(content.extractedData.stepsSummary)) {
       content.extractedData.stepsSummary.forEach((step: string) => {
         logParts.push(step);
       });
     } else {
-      logParts.push(String(content.extractedData.stepsSummary || 'None'));
+      logParts.push(String(content.extractedData.stepsSummary || "None"));
     }
-    
-    logParts.push(`\n=== FINAL URL ===\n${content.extractedData.finalUrl || 'None'}\n`);
+
+    logParts.push(`\n=== FINAL URL ===\n${content.extractedData.finalUrl || "None"}\n`);
   }
-  
+
   // Add journey details in a readable format
   if (content.returnObject?.journey) {
     logParts.push(`\n=== JOURNEY DETAILS ===`);
@@ -67,24 +67,24 @@ async function writeToLogFile(test: Test, content: any) {
       if (step.url) logParts.push(`  URL: ${step.url}`);
       if (step.text) logParts.push(`  Text: ${step.text}`);
       if (step.key) logParts.push(`  Key: ${step.key}`);
-      if (step.values) logParts.push(`  Values: ${step.values.join(', ')}`);
+      if (step.values) logParts.push(`  Values: ${step.values.join(", ")}`);
     });
   }
-  
+
   // Add detailed step execution information
   if (content.stepDetails && content.stepDetails.length > 0) {
     logParts.push(`\n\n=== DETAILED STEP EXECUTION ===`);
     content.stepDetails.forEach((stepDetail: any) => {
       logParts.push(`\n--- STEP ${stepDetail.stepNumber} (${stepDetail.stepType}) ---`);
       logParts.push(`  Finish Reason: ${JSON.stringify(stepDetail.finishReason)}`);
-      
+
       if (stepDetail.toolCalls && stepDetail.toolCalls.length > 0) {
         logParts.push(`  Tool Calls:`);
         stepDetail.toolCalls.forEach((call: any, idx: number) => {
           logParts.push(`    Call ${idx + 1}: ${call.name} - ${JSON.stringify(call.args)}`);
         });
       }
-      
+
       if (stepDetail.toolResults && stepDetail.toolResults.length > 0) {
         logParts.push(`  Tool Results:`);
         stepDetail.toolResults.forEach((result: any, idx: number) => {
@@ -93,29 +93,29 @@ async function writeToLogFile(test: Test, content: any) {
       }
     });
   }
-  
+
   // Add rate limit information if present
   if (content.rateLimitInfo) {
     logParts.push(`\n\n=== RATE LIMIT INFORMATION ===`);
     logParts.push(`Total Retry Attempts: ${content.rateLimitInfo.totalRetries || 0}`);
-    
+
     if (content.rateLimitInfo.retryEvents && content.rateLimitInfo.retryEvents.length > 0) {
       logParts.push(`\nRetry Events:`);
       content.rateLimitInfo.retryEvents.forEach((event: any, idx: number) => {
         logParts.push(`  Event ${idx + 1}:`);
         logParts.push(`    Time: ${event.time}`);
         logParts.push(`    Delay: ${event.delayMs}ms`);
-        logParts.push(`    Reason: ${event.reason || 'Unknown'}`);
+        logParts.push(`    Reason: ${event.reason || "Unknown"}`);
       });
     }
   }
-  
+
   // Add raw data in JSON format at the end for reference
   logParts.push(`\n\n=== RAW DATA ===\n${JSON.stringify(content, null, 2)}`);
-  
+
   // Join all parts with newlines
-  const contentStr = logParts.join('\n');
-  
+  const contentStr = logParts.join("\n");
+
   // Write to file
   await fs.writeFile(filePath, contentStr);
   console.log(`Results written to ${filePath}`);
@@ -157,11 +157,11 @@ async function withExponentialBackoff<T>(
   maxRetries = 5,
   initialDelayMs = 1000,
   maxDelayMs = 30000,
-  rateLimitInfo?: { totalRetries: number; retryEvents: any[] }
+  rateLimitInfo?: { totalRetries: number; retryEvents: any[] },
 ): Promise<T> {
   let retries = 0;
   let delay = initialDelayMs;
-  
+
   while (true) {
     try {
       return await fn();
@@ -169,30 +169,30 @@ async function withExponentialBackoff<T>(
       // Handle different error object structures
       // The AI SDK can wrap errors in different ways
       const originalError = error?.lastError || error;
-      
+
       // Check if it's a rate limit error (429)
-      const isRateLimit = 
-        originalError?.statusCode === 429 || 
-        originalError?.data?.error?.code === 'rate_limit_exceeded' ||
-        error?.message?.includes('rate limit') ||
-        originalError?.message?.includes('rate limit');
-      
+      const isRateLimit =
+        originalError?.statusCode === 429 ||
+        originalError?.data?.error?.code === "rate_limit_exceeded" ||
+        error?.message?.includes("rate limit") ||
+        originalError?.message?.includes("rate limit");
+
       if (!isRateLimit || retries >= maxRetries) {
         // Rethrow if not a rate limit error or if we've exceeded max retries
         console.log(`Error not retryable or max retries (${maxRetries}) exceeded:`, error);
         throw error;
       }
-      
+
       // Extract retry-after from headers if available
       let retryAfterMs = delay;
-      
+
       // Try different paths to find the retry-after value
       const headers = originalError?.responseHeaders || {};
-      
-      if (headers['retry-after-ms']) {
-        retryAfterMs = Number(headers['retry-after-ms']);
-      } else if (headers['retry-after']) {
-        retryAfterMs = Number(headers['retry-after']) * 1000;
+
+      if (headers["retry-after-ms"]) {
+        retryAfterMs = Number(headers["retry-after-ms"]);
+      } else if (headers["retry-after"]) {
+        retryAfterMs = Number(headers["retry-after"]) * 1000;
       } else if (originalError?.data?.error?.message) {
         // Try to extract seconds from the error message
         const match = originalError.data.error.message.match(/try again in (\d+\.?\d*)s/i);
@@ -200,25 +200,25 @@ async function withExponentialBackoff<T>(
           retryAfterMs = Number(match[1]) * 1000;
         }
       }
-      
+
       // Track retry information if rateLimitInfo is provided
       if (rateLimitInfo) {
         rateLimitInfo.totalRetries++;
         rateLimitInfo.retryEvents.push({
           time: new Date().toISOString(),
           delayMs: retryAfterMs,
-          reason: originalError?.data?.error?.message || error?.message || 'Rate limit exceeded',
-          attempt: retries + 1
+          reason: originalError?.data?.error?.message || error?.message || "Rate limit exceeded",
+          attempt: retries + 1,
         });
       }
-      
+
       // Log the retry attempt with detailed information
-      console.log(`Rate limit hit. Retrying in ${retryAfterMs/1000}s (attempt ${retries + 1}/${maxRetries})`);
-      console.log(`Rate limit details: ${originalError?.data?.error?.message || 'No detailed message'}`);
-      
+      console.log(`Rate limit hit. Retrying in ${retryAfterMs / 1000}s (attempt ${retries + 1}/${maxRetries})`);
+      console.log(`Rate limit details: ${originalError?.data?.error?.message || "No detailed message"}`);
+
       // Wait for the specified delay
-      await new Promise(resolve => setTimeout(resolve, retryAfterMs));
-      
+      await new Promise((resolve) => setTimeout(resolve, retryAfterMs));
+
       // Increase the delay for the next retry (exponential backoff)
       delay = Math.min(delay * 2, maxDelayMs);
       retries++;
@@ -306,8 +306,8 @@ export async function runAIAgent(test: Test) {
     },
     rateLimitInfo: {
       totalRetries: 0,
-      retryEvents: []
-    }
+      retryEvents: [],
+    },
   };
 
   let text, steps, toolCalls, toolResults, output, reasoning, sources, finishReason, usage;
@@ -316,20 +316,26 @@ export async function runAIAgent(test: Test) {
     const retryCounter = { count: 0, events: [] };
 
     // Store the complete result first - Now with exponential backoff
-    const result = await withExponentialBackoff(async () => {
-      console.log("Attempting generateText call...");
-      return generateText({
-        model: openai("gpt-4.1-mini"), // Upgraded to more capable model "gpt-4o"
-        system: systemPrompt,
-        tools,
-        messages: [{ role: "user", content: userPrompt }],
-        temperature: 0.1, 
-        maxTokens: 20000,
-        maxSteps: 35,
-        experimental_continueSteps: true,
-        experimental_output: Output.object({ schema: urlSchema }),
-      });
-    }, 5, 2000, 60000, fullLog.rateLimitInfo);
+    const result = await withExponentialBackoff(
+      async () => {
+        console.log("Attempting generateText call...");
+        return generateText({
+          model: openai("gpt-4.1-mini"), // Upgraded to more capable model "gpt-4o"
+          system: systemPrompt,
+          tools,
+          messages: [{ role: "user", content: userPrompt }],
+          temperature: 0.1,
+          maxTokens: 20000,
+          maxSteps: 35,
+          experimental_continueSteps: true,
+          experimental_output: Output.object({ schema: urlSchema }),
+        });
+      },
+      5,
+      2000,
+      60000,
+      fullLog.rateLimitInfo,
+    );
 
     // Add to log collection
     fullLog.rawResult = result;
@@ -367,21 +373,20 @@ export async function runAIAgent(test: Test) {
 
     console.log("=== Usage Statistics ===");
     console.log(usage || "No usage statistics provided");
-
   } catch (error) {
     console.error("Error during AI agent execution:", error);
-    
+
     // Add error information to the log
     fullLog.error = {
-      type: typeof error === 'object' && error !== null ? (error as any).name || "Unknown" : "Unknown",
-      message: typeof error === 'object' && error !== null ? (error as any).message || "No message" : String(error),
-      details: error
+      type: typeof error === "object" && error !== null ? (error as any).name || "Unknown" : "Unknown",
+      message: typeof error === "object" && error !== null ? (error as any).message || "No message" : String(error),
+      details: error,
     };
 
     // Write error to log file
     const logFilePath = await writeToLogFile(test, fullLog);
     console.log(`Error results written to: ${logFilePath}`);
-    
+
     // Rethrow the error after logging
     throw error;
   } finally {
@@ -396,7 +401,7 @@ export async function runAIAgent(test: Test) {
     console.log("finishReason:", step.finishReason);
     console.log("toolCalls:", step.toolCalls);
     console.log("toolResults:", step.toolResults);
-    
+
     // Add to log collection with more detailed information
     fullLog.stepDetails.push({
       stepNumber: i + 1,
@@ -404,13 +409,13 @@ export async function runAIAgent(test: Test) {
       finishReason: step.finishReason,
       toolCalls: step.toolCalls,
       toolResults: step.toolResults,
-      fullStepDetails: step // Include the full step object for comprehensive logging
+      fullStepDetails: step, // Include the full step object for comprehensive logging
     });
   });
 
   // Log the raw output for debugging
   console.log("generateText returned (raw):", JSON.stringify({ text, toolCalls, toolResults, output }, null, 2));
-  
+
   // Add structured outputs to log collection
   fullLog.structuredOutput = {
     text,
@@ -422,10 +427,10 @@ export async function runAIAgent(test: Test) {
   // Log the new fields
   console.log("=== Site Description ===");
   console.log(output?.siteDescription || "No site description provided");
-  
+
   console.log("=== Steps Summary ===");
   console.log(output?.stepsSummary || "No steps summary provided");
-  
+
   // Add extracted data to log collection
   fullLog.extractedData = {
     siteDescription: output?.siteDescription || "No site description provided",
@@ -446,16 +451,16 @@ export async function runAIAgent(test: Test) {
     stepsSummary: stepsSummary || null,
     journey: journey || [],
   };
-  
+
   console.log("=== Return Object ===");
   console.log(JSON.stringify(returnObject, null, 2));
-  
+
   // Add return object to log collection
   fullLog.returnObject = returnObject;
-  
+
   // Write the complete log to a file
   const logFilePath = await writeToLogFile(test, fullLog);
   console.log(`Complete test results written to: ${logFilePath}`);
-  
+
   return returnObject;
 }

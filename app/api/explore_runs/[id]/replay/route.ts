@@ -2,13 +2,13 @@ import { getReplay } from "@/lib/browser-manager";
 import { prisma } from "@/utils/db";
 import { NextResponse } from "next/server";
 
-export async function GET(req: Request, { params }: { params: Promise<{ testId: string }> }) {
-  const { testId } = await params;
+export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
 
   try {
-    const test = await prisma.test.findUnique({
+    const test = await prisma.exploreRun.findUnique({
       where: {
-        id: testId,
+        id: id,
         status: "complete",
       },
     });
