@@ -3,6 +3,7 @@
 import { Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { fetcher } from "@/utils/api";
 import { useEffect, useRef } from "react";
 import rrwebPlayer from "rrweb-player";
@@ -180,26 +181,43 @@ const ExploreRunView = ({ id }: { id: string }) => {
           </div>
         )}
 
-        {exploreRun.status == "complete" && !replayData && (
-          <div className="p-6 text-center">
-            <h3 className="text-lg font-medium">Generation Complete</h3>
-            <p className="text-zinc-500 dark:text-zinc-400">You can now view the replay here.</p>
-            <Button
-              disabled={isLoadingReplay}
-              variant="default"
-              onClick={() => loadReplay()}
-              className="mt-3 bg-green-700 hover:bg-green-800"
-            >
-              {isLoadingReplay && <Loader2 className="animate-spin" />}
-              Load Replay
-            </Button>
-          </div>
-        )}
+        {exploreRun.status == "complete" && (
+          <Tabs defaultValue="steps" className="w-full">
+            <TabsList>
+              <TabsTrigger value="steps">Steps</TabsTrigger>
+              <TabsTrigger value="replay">Replay</TabsTrigger>
+            </TabsList>
+            <TabsContent value="replay" className="p-6 text-center">
+              {!replayData && (
+                <div>
+                  <h3 className="text-lg font-medium">Generation Complete</h3>
+                  <p className="text-zinc-500 dark:text-zinc-400">You can now view the replay here.</p>
+                  <Button
+                    disabled={isLoadingReplay}
+                    variant="default"
+                    onClick={() => loadReplay()}
+                    className="mt-3 bg-green-700 hover:bg-green-800"
+                  >
+                    {isLoadingReplay && <Loader2 className="animate-spin" />}
+                    Load Replay
+                  </Button>
+                </div>
+              )}
 
-        {replayData && (
-          <div>
-            <div ref={playerRef} />
-          </div>
+              {replayData && (
+                <div>
+                  <div ref={playerRef} />
+                </div>
+              )}
+            </TabsContent>
+            <TabsContent value="steps" className="p-6">
+              {exploreRun.stepsSummary.map((step: any, index: number) => (
+                <div key={index}>
+                  <p>{step}</p>
+                </div>
+              ))}
+            </TabsContent>
+          </Tabs>
         )}
       </div>
     </div>
