@@ -1,15 +1,15 @@
 import { generateText, Output } from "ai";
 import { openai } from "@ai-sdk/openai";
 import { z } from "zod";
-import { Test } from "./generated/prisma/client";
+import { ExploreRun } from "./generated/prisma/client";
 import { connectPlaywrightMCP } from "@/lib/browser-manager";
 import * as fs from "fs/promises";
 import * as path from "path";
 
 // Helper function to write content to file
-async function writeToLogFile(test: Test, content: any) {
+async function writeToLogFile(exploreRun: ExploreRun, content: any) {
   const timestamp = new Date().toISOString().replace(/:/g, "-");
-  const testId = test.id || "unknown";
+  const testId = exploreRun.id || "unknown";
   const filePath = path.join(process.cwd(), "logs", `test-${testId}-${timestamp}.txt`);
 
   // Ensure logs directory exists
@@ -22,9 +22,9 @@ async function writeToLogFile(test: Test, content: any) {
   logParts.push(`=== TEST RESULTS: ${testId} (${new Date().toISOString()}) ===\n`);
 
   // Add test info
-  logParts.push(`URL: ${test.url || "No URL provided"}`);
-  logParts.push(`Test Name: ${test.name || "Unnamed Test"}`);
-  logParts.push(`Description: ${test.description || "No description"}\n`);
+  logParts.push(`URL: ${exploreRun.url || "No URL provided"}`);
+  logParts.push(`Test Name: ${exploreRun.name || "Unnamed Test"}`);
+  logParts.push(`Description: ${exploreRun.description || "No description"}\n`);
 
   // Add error information if present
   if (content.error) {
@@ -226,9 +226,9 @@ async function withExponentialBackoff<T>(
   }
 }
 
-export async function runAIAgent(test: Test) {
-  const url = test.url;
-  const { tools, close } = await connectPlaywrightMCP(test.cdpEndpoint);
+export async function runAIAgent(exploreRun: ExploreRun) {
+  const url = exploreRun.url;
+  const { tools, close } = await connectPlaywrightMCP(exploreRun.cdpEndpoint);
 
   const systemPrompt = `
   You are a senior QA engineer and Playwright MCP specialist. Your job is to drive an autonomous "expert tester" that uses only the Playwright MCP tools provided. Your main goal is to complete any form submission journey from start to finish, calling exactly one browser tool at a time, then waiting 1 second, then taking a new snapshot before any further action.
@@ -297,7 +297,7 @@ export async function runAIAgent(test: Test) {
   const fullLog: Record<string, any> = {
     initialData: {
       url,
-      testId: test.id,
+      testId: exploreRun.id,
       timestamp: new Date().toISOString(),
     },
     promptData: {
@@ -384,7 +384,7 @@ export async function runAIAgent(test: Test) {
     };
 
     // Write error to log file
-    const logFilePath = await writeToLogFile(test, fullLog);
+    const logFilePath = await writeToLogFile(exploreRun, fullLog);
     console.log(`Error results written to: ${logFilePath}`);
 
     // Rethrow the error after logging
@@ -459,7 +459,7 @@ export async function runAIAgent(test: Test) {
   fullLog.returnObject = returnObject;
 
   // Write the complete log to a file
-  const logFilePath = await writeToLogFile(test, fullLog);
+  const logFilePath = await writeToLogFile(exploreRun, fullLog);
   console.log(`Complete test results written to: ${logFilePath}`);
 
   return returnObject;
