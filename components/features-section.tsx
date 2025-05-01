@@ -12,7 +12,7 @@ function Feature({ title, description }: FeatureProps) {
         <CheckCircle className="h-5 w-5 text-purple-600" />
         <h3 className="text-lg font-semibold">{title}</h3>
       </div>
-      <p className="pl-7 text-muted-foreground">{description}</p>
+      <p className="text-muted-foreground pl-7">{description}</p>
     </div>
   );
 }

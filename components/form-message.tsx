@@ -4,12 +4,12 @@ export function FormMessage({ message }: { message: Message }) {
   return (
     <div className="flex w-full max-w-md flex-col gap-2 text-sm">
       {"success" in message && (
-        <div className="border-l-2 border-foreground px-4 text-foreground">{message.success}</div>
+        <div className="border-foreground text-foreground border-l-2 px-4">{message.success}</div>
       )}
       {"error" in message && (
-        <div className="border-l-2 border-destructive-foreground px-4 text-destructive-foreground">{message.error}</div>
+        <div className="border-destructive-foreground text-destructive-foreground border-l-2 px-4">{message.error}</div>
       )}
-      {"message" in message && <div className="border-l-2 px-4 text-foreground">{message.message}</div>}
+      {"message" in message && <div className="text-foreground border-l-2 px-4">{message.message}</div>}
     </div>
   );
 }

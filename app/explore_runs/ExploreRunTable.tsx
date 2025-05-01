@@ -21,8 +21,8 @@ const ExploreRunTable = () => {
 
           {exploreRun.status == "running" && (
             <div className="relative mb-1 h-1.5 w-full overflow-hidden rounded-t bg-gray-300">
-              <div className="animate-indeterminate1 absolute left-0 top-0 h-full bg-orange-500" />
-              <div className="animate-indeterminate2 absolute left-0 top-0 h-full bg-orange-500" />
+              <div className="animate-indeterminate1 absolute top-0 left-0 h-full bg-orange-500" />
+              <div className="animate-indeterminate2 absolute top-0 left-0 h-full bg-orange-500" />
             </div>
           )}
 

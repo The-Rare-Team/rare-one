@@ -10,10 +10,10 @@ export default async function ForgotPassword(props: { searchParams: Promise<Mess
   const searchParams = await props.searchParams;
   return (
     <>
-      <form className="mx-auto flex w-full min-w-64 max-w-64 flex-1 flex-col gap-2 text-foreground [&>input]:mb-6">
+      <form className="text-foreground mx-auto flex w-full max-w-64 min-w-64 flex-1 flex-col gap-2 [&>input]:mb-6">
         <div>
           <h1 className="text-2xl font-medium">Reset Password</h1>
-          <p className="text-sm text-secondary-foreground">
+          <p className="text-secondary-foreground text-sm">
             Already have an account?{" "}
             <Link className="text-primary underline" href="/sign-in">
               Sign in
