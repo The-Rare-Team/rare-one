@@ -8,7 +8,7 @@ export const POST = async function POST(req: NextRequest, { params }: { params: 
   console.log("Running test with ID:", id);
 
   try {
-    const test = await prisma.exploreRun.update({
+    const exploreRun = await prisma.exploreRun.update({
       where: {
         id,
         status: "pending",
@@ -18,7 +18,7 @@ export const POST = async function POST(req: NextRequest, { params }: { params: 
       },
     });
 
-    const result = await runAIAgent(test!);
+    const result = await runAIAgent(exploreRun!);
 
     await prisma.exploreRun.update({
       where: {
