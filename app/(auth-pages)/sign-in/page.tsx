@@ -10,12 +10,12 @@ export default async function Login(props: { searchParams: Promise<Message> }) {
   return (
     <form className="flex min-w-64 flex-1 flex-col">
       <h1 className="text-2xl font-medium">Sign in</h1>
-      <p className="text-foreground text-sm">
+      {/* <p className="text-foreground text-sm">
         Dont have an account?
         <Link className="text-foreground font-medium underline" href="/sign-up">
           Sign up
         </Link>
-      </p>
+      </p> */}
       <div className="mt-8 flex flex-col gap-2 [&>input]:mb-3">
         <Label htmlFor="email">Email</Label>
         <Input name="email" placeholder="you@example.com" required />

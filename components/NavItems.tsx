@@ -1,10 +1,10 @@
 "use client";
 
+import { createClient } from "@/utils/supabase/client";
+import { User } from "@supabase/supabase-js";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { createClient } from "@/utils/supabase/client";
-import { User } from "@supabase/supabase-js";
 
 const NavItems = () => {
   const path = usePathname();
@@ -25,11 +25,11 @@ const NavItems = () => {
   if (!user) return null;
 
   return (
-    <div className="flex items-center gap-5 text-slate-400">
-      <Link href={"/explore_runs"} className={path.includes("/explore_runs") ? "text-slate-900" : ""}>
+    <div className="flex items-center gap-5 font-normal text-slate-400">
+      <Link href={"/explore_runs"} className={path.includes("/explore_runs") ? "font-medium text-slate-900" : ""}>
         Generate Tests
       </Link>
-      <Link href={"/tests"} className={path.includes("/tests") ? "text-slate-900" : ""}>
+      <Link href={"/tests"} className={path.includes("/tests") ? "font-medium text-slate-900" : ""}>
         My Tests
       </Link>
     </div>

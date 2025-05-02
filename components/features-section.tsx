@@ -20,24 +20,25 @@ function Feature({ title, description }: FeatureProps) {
 export default function FeaturesSection() {
   const features = [
     {
-      title: "No wasted ad spend",
-      description: "Kevin ensures your landing page is working 24/7 so your ad spend is never wasted.",
-    },
-    {
-      title: "Context Aware",
+      title: "Never Waste Ad Spend Again",
       description:
-        "Kevin sees your landing page like a human, and tests it like a human, and works even if you are doing A/B testing.",
+        "Green Chair monitors your landing page 24/7, so you are not burning budget on broken links or failed loadouts.",
     },
     {
-      title: "No Scripting or Prompting",
-      description: "Just input your landing page URL, and Kevin will do the rest.",
+      title: "Smarter Than Scripts",
+      description:
+        "Green Chair understands your landing page like a human—detecting issues even during A/B tests and dynamic changes.",
+    },
+    {
+      title: "Zero Setup Required",
+      description: "Just drop in your landing page URL. No test scripting. No prompting. Green Chair handles the rest.",
     },
   ];
 
   return (
     <section className="px-4 py-16" id="features">
       <div className="mx-auto max-w-5xl">
-        <h2 className="mb-12 text-center text-3xl font-bold">How Kevin Works</h2>
+        <h2 className="mb-12 text-center text-3xl font-bold">How Green Chair Works</h2>
         <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
           {features.map((feature, index) => (
             <Feature key={index} title={feature.title} description={feature.description} />

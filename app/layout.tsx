@@ -1,10 +1,9 @@
 import { EnvVarWarning } from "@/components/env-var-warning";
 import HeaderAuth from "@/components/header-auth";
 import NavItems from "@/components/NavItems";
-import { ThemeSwitcher } from "@/components/theme-switcher";
 import { hasEnvVars } from "@/utils/supabase/check-env-vars";
 import { ThemeProvider } from "next-themes";
-import { Geist } from "next/font/google";
+import { Outfit } from "next/font/google";
 import Image from "next/image";
 import Link from "next/link";
 import { ToastContainer } from "react-toastify";
@@ -17,8 +16,7 @@ export const metadata = {
   title: "Autonomous QA Teammate - The Rare One",
 };
 
-const geistSans = Geist({
-  display: "swap",
+const geistSans = Outfit({
   subsets: ["latin"],
 });
 
@@ -35,10 +33,15 @@ export default function RootLayout({
             <div className="flex w-full flex-1 flex-col items-center gap-2">
               <nav className="border-b-foreground/10 flex h-16 w-full justify-center border-b">
                 <div className="flex w-full max-w-5xl items-center justify-between p-3 px-5 text-sm">
-                  <div className="flex items-center gap-5 font-semibold">
+                  <div className="flex items-center gap-3 font-semibold">
                     <Link href={"/"} className="flex gap-x-2 text-lg">
-                      <Image src="/logo.png" alt="Logo" width={35} height={35} className="-mt-2" />
-                      <span className="text-lg">Hey Kevin</span>
+                      <Image
+                        src="/logo_sm.png"
+                        alt="Green Chair logo"
+                        width={380 * 0.4}
+                        height={86 * 0.4}
+                        className=""
+                      />
                     </Link>
                     <NavItems />
                   </div>
@@ -49,10 +52,6 @@ export default function RootLayout({
                 {children}
                 <ToastContainer theme="colored" />
               </div>
-
-              <footer className="mx-auto flex w-full items-center justify-center gap-8 border-t py-16 text-center text-xs">
-                <p>Rare Tech</p>
-              </footer>
             </div>
           </main>
         </ThemeProvider>
