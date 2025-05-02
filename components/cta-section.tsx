@@ -10,7 +10,7 @@ export default function CTASection() {
         </p>
         <div className="flex flex-col justify-center gap-4 sm:flex-row">
           <Button asChild className="rounded-lg bg-[#086788] px-6 py-6 text-lg text-white hover:bg-[#07506a]">
-            <a href="https://forms.gle/pvm8eMPwNtVtsZSc6" target="_blank" rel="noopener noreferrer">
+            <a href="https://forms.gle/GLC4EzvdtZcBSzKf7" target="_blank" rel="noopener noreferrer">
               Get Early Access
             </a>
           </Button>
