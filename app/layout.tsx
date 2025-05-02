@@ -30,7 +30,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={geistSans.className} suppressHydrationWarning>
       <body className="bg-background text-foreground">
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+        <ThemeProvider attribute="class" defaultTheme="light" disableTransitionOnChange>
           <main className="flex min-h-screen flex-col items-center">
             <div className="flex w-full flex-1 flex-col items-center gap-2">
               <nav className="border-b-foreground/10 flex h-16 w-full justify-center border-b">
@@ -38,7 +38,7 @@ export default function RootLayout({
                   <div className="flex items-center gap-5 font-semibold">
                     <Link href={"/"} className="flex gap-x-2 text-lg">
                       <Image src="/logo.png" alt="Logo" width={35} height={35} className="-mt-2" />
-                      <span className="text-lg">Rare QA</span>
+                      <span className="text-lg">Hey Kevin</span>
                     </Link>
                     <NavItems />
                   </div>
@@ -52,7 +52,6 @@ export default function RootLayout({
 
               <footer className="mx-auto flex w-full items-center justify-center gap-8 border-t py-16 text-center text-xs">
                 <p>Rare Tech</p>
-                <ThemeSwitcher />
               </footer>
             </div>
           </main>
