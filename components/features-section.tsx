@@ -9,7 +9,7 @@ function Feature({ title, description }: FeatureProps) {
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center gap-2">
-        <CheckCircle className="h-5 w-5 text-purple-600" />
+        <CheckCircle className="h-5 w-5 text-[#086788]" />
         <h3 className="text-lg font-semibold">{title}</h3>
       </div>
       <p className="text-muted-foreground pl-7">{description}</p>
