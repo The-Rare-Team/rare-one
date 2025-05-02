@@ -45,7 +45,10 @@ export default async function AuthButton() {
       </>
     );
   }
-  return user ? (
+  if (!user) {
+    return null;
+  }
+  return (
     <div className="flex items-center gap-4">
       Hey, {user.email}!
       <form action={signOutAction}>
@@ -53,15 +56,6 @@ export default async function AuthButton() {
           Sign out
         </Button>
       </form>
-    </div>
-  ) : (
-    <div className="flex gap-2">
-      <Button asChild size="sm" variant={"outline"}>
-        <Link href="/sign-in">Sign in</Link>
-      </Button>
-      <Button asChild size="sm" variant={"default"}>
-        <Link href="/sign-up">Sign up</Link>
-      </Button>
     </div>
   );
 }
