@@ -11,7 +11,7 @@ import "rrweb-player/dist/style.css";
 import useSWR, { mutate } from "swr";
 import useSWRMutation from "swr/mutation";
 
-const ExploreRunView = ({ id }: { id: string }) => {
+export default function ExploreRunDetail({ id }: { id: string }) {
   const {
     data: exploreRun,
     error,
@@ -22,6 +22,7 @@ const ExploreRunView = ({ id }: { id: string }) => {
       return exploreRun.status === "pending" ? 1000 : 6000; // 5s if pending, otherwise no refresh
     },
   });
+
   const {
     data: replayData,
     trigger,
@@ -222,6 +223,4 @@ const ExploreRunView = ({ id }: { id: string }) => {
       </div>
     </div>
   );
-};
-
-export default ExploreRunView;
+}

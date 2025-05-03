@@ -2,7 +2,7 @@
 
 import ArrowLeftIcon from "@heroicons/react/24/solid/ArrowLeftIcon";
 import Link from "next/link";
-import ExploreRunView from "./ExploreRunView";
+import ExploreRunDetail from "./explore-run-detail";
 
 export default async function Page({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -18,7 +18,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
         </Link>
       </div>
 
-      <ExploreRunView id={id} />
+      <ExploreRunDetail id={id} />
     </div>
   );
 }
