@@ -4,7 +4,7 @@ import { createClient } from "@/utils/supabase/client";
 import { useEffect, useState } from "react";
 import { User } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
-import { submitUrl, launchBrowser, startBrowserSession } from "@/app/actions";
+import { submitUrl, launchBrowser, startBrowserSession } from "@/app/(backend)/actions";
 import { useFormStatus } from "react-dom";
 
 function SubmitButton() {
