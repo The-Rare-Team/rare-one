@@ -94,6 +94,14 @@ async function writeToLogFile(exploreRun: ExploreRun, content: any) {
     });
   }
 
+  // Add the real-time logs from onStepFinish
+  if (content.onStepFinishLogs && content.onStepFinishLogs.length > 0) {
+    logParts.push(`\n\n=== REAL-TIME STEP LOGS (from onStepFinish & final loop) ===`);
+    content.onStepFinishLogs.forEach((logEntry: string) => {
+      logParts.push(logEntry);
+    });
+  }
+
   // Add raw data in JSON format at the end for reference
   logParts.push(`\n\n=== RAW DATA ===\n${JSON.stringify(content, null, 2)}`);
 
@@ -205,9 +213,11 @@ export async function runAIAgent(exploreRun: ExploreRun) {
       system: systemPrompt,
       user: userPrompt,
     },
+    onStepFinishLogs: [], // Initialize array for onStepFinish logs
   };
 
   let text, steps, toolCalls, toolResults, output, reasoning, sources, finishReason, usage;
+  let stepCounter = 0; // Initialize step counter
   try {
     // Define the model without the .withRetry() chain
     const model = openai("gpt-4.1-mini");
@@ -224,6 +234,15 @@ export async function runAIAgent(exploreRun: ExploreRun) {
       experimental_continueSteps: true, // Enables only full tokens to be streamed out 
       experimental_output: Output.object({ schema: urlSchema }), // forces a json output 
       maxRetries: 5, // exponential back off 
+      onStepFinish: async (stepResult) => {
+        stepCounter++; // Increment step counter
+        // Capture step info for the log file instead of console
+        fullLog.onStepFinishLogs.push(`--- onStepFinish: Step ${stepCounter} ---`);
+        fullLog.onStepFinishLogs.push(`  Finish Reason: ${JSON.stringify(stepResult.finishReason)}`);
+        fullLog.onStepFinishLogs.push(`  Tool Calls: ${JSON.stringify(stepResult.toolCalls)}`);
+        fullLog.onStepFinishLogs.push(`  Tool Results: ${JSON.stringify(stepResult.toolResults)}`);
+        fullLog.onStepFinishLogs.push(`  Usage: ${JSON.stringify(stepResult.usage)}`);
+      }
     });
 
     // Add to log collection
@@ -277,13 +296,11 @@ export async function runAIAgent(exploreRun: ExploreRun) {
   // Add steps data to log collection
   fullLog.stepDetails = [];
   steps.forEach((step, i) => {
-    console.log(`\n--- STEP ${i + 1} (${step.stepType}) ---`);
-    console.log("THE step:", step);
-    console.log("finishReason:", step.finishReason);
-    console.log("toolCalls:", step.toolCalls);
-    console.log("toolResults:", step.toolResults);
+    // Capture final step details for the log file
+    fullLog.onStepFinishLogs.push(`--- Final Loop: Step ${i + 1} (${step.stepType}) ---`);
+    fullLog.onStepFinishLogs.push(`  Full Details: ${JSON.stringify(step)}`); 
 
-    // Add to log collection with more detailed information
+    // Add to log collection with more detailed information (for structured stepDetails section)
     fullLog.stepDetails.push({
       stepNumber: i + 1,
       stepType: step.stepType,
