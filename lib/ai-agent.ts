@@ -94,22 +94,6 @@ async function writeToLogFile(exploreRun: ExploreRun, content: any) {
     });
   }
 
-  // Add rate limit information if present
-  if (content.rateLimitInfo) {
-    logParts.push(`\n\n=== RATE LIMIT INFORMATION ===`);
-    logParts.push(`Total Retry Attempts: ${content.rateLimitInfo.totalRetries || 0}`);
-
-    if (content.rateLimitInfo.retryEvents && content.rateLimitInfo.retryEvents.length > 0) {
-      logParts.push(`\nRetry Events:`);
-      content.rateLimitInfo.retryEvents.forEach((event: any, idx: number) => {
-        logParts.push(`  Event ${idx + 1}:`);
-        logParts.push(`    Time: ${event.time}`);
-        logParts.push(`    Delay: ${event.delayMs}ms`);
-        logParts.push(`    Reason: ${event.reason || "Unknown"}`);
-      });
-    }
-  }
-
   // Add raw data in JSON format at the end for reference
   logParts.push(`\n\n=== RAW DATA ===\n${JSON.stringify(content, null, 2)}`);
 
@@ -142,89 +126,6 @@ const urlSchema = z.object({
     .describe("A list of steps taken during the test, with each item representing a distinct step."),
   finalUrl: z.string().url().describe("The final URL after all actions are completed."),
 });
-
-// Helper function to implement exponential backoff for API calls
-/**
- * Executes a function with exponential backoff retry for API rate limit errors.
- * This specifically handles OpenAI's 429 rate limit errors by:
- * 1. Detecting rate limit errors through status codes or error messages
- * 2. Using the server's retry-after header when available
- * 3. Implementing exponential backoff with a maximum delay cap
- * 4. Limiting total retry attempts
- */
-async function withExponentialBackoff<T>(
-  fn: () => Promise<T>,
-  maxRetries = 5,
-  initialDelayMs = 1000,
-  maxDelayMs = 30000,
-  rateLimitInfo?: { totalRetries: number; retryEvents: any[] },
-): Promise<T> {
-  let retries = 0;
-  let delay = initialDelayMs;
-
-  while (true) {
-    try {
-      return await fn();
-    } catch (error: any) {
-      // Handle different error object structures
-      // The AI SDK can wrap errors in different ways
-      const originalError = error?.lastError || error;
-
-      // Check if it's a rate limit error (429)
-      const isRateLimit =
-        originalError?.statusCode === 429 ||
-        originalError?.data?.error?.code === "rate_limit_exceeded" ||
-        error?.message?.includes("rate limit") ||
-        originalError?.message?.includes("rate limit");
-
-      if (!isRateLimit || retries >= maxRetries) {
-        // Rethrow if not a rate limit error or if we've exceeded max retries
-        console.log(`Error not retryable or max retries (${maxRetries}) exceeded:`, error);
-        throw error;
-      }
-
-      // Extract retry-after from headers if available
-      let retryAfterMs = delay;
-
-      // Try different paths to find the retry-after value
-      const headers = originalError?.responseHeaders || {};
-
-      if (headers["retry-after-ms"]) {
-        retryAfterMs = Number(headers["retry-after-ms"]);
-      } else if (headers["retry-after"]) {
-        retryAfterMs = Number(headers["retry-after"]) * 1000;
-      } else if (originalError?.data?.error?.message) {
-        // Try to extract seconds from the error message
-        const match = originalError.data.error.message.match(/try again in (\d+\.?\d*)s/i);
-        if (match && match[1]) {
-          retryAfterMs = Number(match[1]) * 1000;
-        }
-      }
-
-      // Track retry information if rateLimitInfo is provided
-      if (rateLimitInfo) {
-        rateLimitInfo.totalRetries++;
-        rateLimitInfo.retryEvents.push({
-          time: new Date().toISOString(),
-          delayMs: retryAfterMs,
-          reason: originalError?.data?.error?.message || error?.message || "Rate limit exceeded",
-          attempt: retries + 1,
-        });
-      }
-
-      // Log the retry attempt with detailed information
-      console.log(`Rate limit hit. Retrying in ${retryAfterMs / 1000}s (attempt ${retries + 1}/${maxRetries})`);
-      console.log(`Rate limit details: ${originalError?.data?.error?.message || "No detailed message"}`);
-
-      // Wait for the specified delay
-      await new Promise((resolve) => setTimeout(resolve, retryAfterMs));
-
-      // Increase the delay for the next retry (exponential backoff)
-      delay = Math.min(delay * 2, maxDelayMs);
-      retries++;
-    }
-  }
-}
 
 export async function runAIAgent(exploreRun: ExploreRun) {
   const url = exploreRun.url;
@@ -304,49 +205,29 @@ export async function runAIAgent(exploreRun: ExploreRun) {
       system: systemPrompt,
       user: userPrompt,
     },
-    rateLimitInfo: {
-      totalRetries: 0,
-      retryEvents: [],
-    },
   };
 
   let text, steps, toolCalls, toolResults, output, reasoning, sources, finishReason, usage;
   try {
-    // Create a counter for retries that the withExponentialBackoff function can modify
-    const retryCounter = { count: 0, events: [] };
+    // Define the model without the .withRetry() chain
+    const model = openai("gpt-4.1-mini");
 
-    // Store the complete result first - Now with exponential backoff
-    const result = await withExponentialBackoff(
-      async () => {
-        console.log("Attempting generateText call...");
-        return generateText({
-          model: openai("gpt-4.1-mini"), // Upgraded to more capable model "gpt-4o"
-          system: systemPrompt,
-          tools,
-          messages: [{ role: "user", content: userPrompt }],
-          temperature: 0.1,
-          maxTokens: 20000,
-          maxSteps: 35,
-          experimental_continueSteps: true,
-          experimental_output: Output.object({ schema: urlSchema }),
-        });
-      },
-      5,
-      2000,
-      60000,
-      fullLog.rateLimitInfo,
-    );
+    const result = await generateText({
+      model, // Pass the base model instance
+      system: systemPrompt,
+      tools,
+      messages: [{ role: "user", content: userPrompt }],
+      temperature: 0.1,
+      maxTokens: 20000,
+      maxSteps: 35,
+      frequencyPenalty: 0.2, // to avoid repeating same lines or phrases
+      experimental_continueSteps: true, // Enables only full tokens to be streamed out 
+      experimental_output: Output.object({ schema: urlSchema }), // forces a json output 
+      maxRetries: 5, // exponential back off 
+    });
 
     // Add to log collection
     fullLog.rawResult = result;
-
-    // Log response headers and body
-    console.log("=== Results ===");
-    console.log(JSON.stringify(result, null, 2));
-    console.log("=== Response Headers ===");
-    console.log(JSON.stringify(result.response?.headers, null, 2));
-    console.log("=== Response Body ===");
-    console.log(JSON.stringify(result.response?.body, null, 2));
 
     // Destructure the properties we need
     ({
