@@ -1,6 +1,6 @@
 import { EnvVarWarning } from "@/components/env-var-warning";
 import HeaderAuth from "@/components/header-auth";
-import NavItems from "@/components/NavItems";
+import NavItems from "@/components/nav-items";
 import { hasEnvVars } from "@/utils/supabase/check-env-vars";
 import { ThemeProvider } from "next-themes";
 import { Outfit } from "next/font/google";
@@ -30,9 +30,9 @@ export default function RootLayout({
       <body className="bg-background text-foreground">
         <ThemeProvider attribute="class" defaultTheme="light" disableTransitionOnChange>
           <main className="flex min-h-screen flex-col items-center">
-            <div className="flex w-full flex-1 flex-col items-center gap-2">
+            <div className="flex w-full flex-col items-center gap-2">
               <nav className="border-b-foreground/10 flex h-16 w-full justify-center border-b">
-                <div className="flex w-full max-w-5xl items-center justify-between p-3 px-5 text-sm">
+                <div className="flex w-full max-w-5xl items-center justify-between p-3 px-5">
                   <div className="flex items-center gap-3 font-semibold">
                     <Link href={"/"} className="flex gap-x-2 text-lg">
                       <Image
@@ -45,7 +45,7 @@ export default function RootLayout({
                     </Link>
                     <NavItems />
                   </div>
-                  {!hasEnvVars ? <EnvVarWarning /> : <HeaderAuth />}
+                  <HeaderAuth />
                 </div>
               </nav>
               <div className="flex w-full max-w-5xl flex-col gap-2 p-5">
