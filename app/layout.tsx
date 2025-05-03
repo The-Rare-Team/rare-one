@@ -1,7 +1,6 @@
-import { EnvVarWarning } from "@/components/env-var-warning";
 import HeaderAuth from "@/components/header-auth";
 import NavItems from "@/components/nav-items";
-import { hasEnvVars } from "@/utils/supabase/check-env-vars";
+import { createClient } from "@/utils/supabase/server";
 import { ThemeProvider } from "next-themes";
 import { Outfit } from "next/font/google";
 import Image from "next/image";
@@ -20,11 +19,17 @@ const geistSans = Outfit({
   subsets: ["latin"],
 });
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
   return (
     <html lang="en" className={geistSans.className} suppressHydrationWarning>
       <body className="bg-background text-foreground">
@@ -43,7 +48,7 @@ export default function RootLayout({
                         className=""
                       />
                     </Link>
-                    <NavItems />
+                    {user && <NavItems />}
                   </div>
                   <HeaderAuth />
                 </div>
