@@ -229,7 +229,7 @@ export async function runAIAgent(exploreRun: ExploreRun) {
       messages: [{ role: "user", content: userPrompt }],
       temperature: 0.1,
       maxTokens: 20000,
-      maxSteps: 35,
+      maxSteps: 60,
       frequencyPenalty: 0.2, // to avoid repeating same lines or phrases
       experimental_continueSteps: true, // Enables only full tokens to be streamed out 
       experimental_output: Output.object({ schema: urlSchema }), // forces a json output 
