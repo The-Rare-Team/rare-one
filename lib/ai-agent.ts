@@ -9,10 +9,10 @@ import * as path from "path";
 
 // Helper function to identify submit attempts
 function isSubmitAttempt(toolCall: any): boolean {
-  if (toolCall?.toolName !== 'browser_click') {
+  if (toolCall?.toolName !== "browser_click") {
     return false;
   }
-  const selector = toolCall.args?.selector?.toLowerCase() || '';
+  const selector = toolCall.args?.selector?.toLowerCase() || "";
   // Basic check for common submit patterns in selectors or button text implied by selectors
   const submitPatterns = /submit|continue|next|confirm|pay|order|checkout|complete|finish|add to cart/i;
   if (submitPatterns.test(selector)) {
@@ -154,7 +154,6 @@ const urlSchema = z.object({
   finalUrl: z.string().url().describe("The final URL after all actions are completed."),
 });
 
-
 export async function runAIAgent(exploreRun: ExploreRun) {
   const url = exploreRun.url;
   const { tools, close } = await connectPlaywrightMCP(exploreRun.cdpEndpoint);
@@ -261,9 +260,9 @@ export async function runAIAgent(exploreRun: ExploreRun) {
       maxTokens: 20000,
       maxSteps: 100, // Keeping maxSteps > 1 for now
       frequencyPenalty: 0.2, // to avoid repeating same lines or phrases
-      experimental_continueSteps: true, // Enables only full tokens to be streamed out 
-      experimental_output: Output.object({ schema: urlSchema }), // forces a json output 
-      maxRetries: 5, // exponential back off 
+      experimental_continueSteps: true, // Enables only full tokens to be streamed out
+      experimental_output: Output.object({ schema: urlSchema }), // forces a json output
+      maxRetries: 5, // exponential back off
       abortSignal: controller.signal, // Pass the abort signal
       experimental_telemetry: { isEnabled: true }, // Enable OpenTelemetry
       experimental_prepareStep: async (step) => {
@@ -280,7 +279,7 @@ export async function runAIAgent(exploreRun: ExploreRun) {
           console.log("INFO: Tool calls in last step:", lastStep.toolCalls);
         }
 
-        // --- Decision Logic --- 
+        // --- Decision Logic ---
         // Based on previousSteps or stepNumber, decide if overrides are needed.
         let overrideModel: any = undefined; // Or potentially openai('gpt-3.5-turbo') etc.
         let overrideToolChoice: any = undefined; // Or { type: 'tool', toolName: '...' }, { type: 'required' }, etc.
@@ -289,11 +288,11 @@ export async function runAIAgent(exploreRun: ExploreRun) {
         // Example Condition: Switch to a specific tool after step 5
         // if (step.stepNumber > 5) {
         //   console.log("INFO: Forcing specific tool after step 5");
-        //   overrideToolChoice = { type: 'tool', toolName: 'browser_snapshot' }; 
+        //   overrideToolChoice = { type: 'tool', toolName: 'browser_snapshot' };
         //   overrideActiveTools = ['browser_snapshot', 'browser_wait'];
         // }
 
-        // --- Return Overrides --- 
+        // --- Return Overrides ---
         // Only include properties you want to override for the *next* step.
         // Returning an empty object means no overrides.
         const overrides: any = {};
@@ -308,16 +307,18 @@ export async function runAIAgent(exploreRun: ExploreRun) {
         const { args } = toolCall;
 
         // Basic check: Log argument type and attempt JSON parse if string
-        if (typeof args === 'string') {
+        if (typeof args === "string") {
           try {
             JSON.parse(args);
             console.log(`INFO: [Repair Check] Args for ${toolCall.toolName} is a valid JSON string.`);
           } catch (error: any) {
-            console.warn(`WARN: [Repair Check] Args for ${toolCall.toolName} is a string but failed JSON parsing: ${error.message}`);
+            console.warn(
+              `WARN: [Repair Check] Args for ${toolCall.toolName} is a string but failed JSON parsing: ${error.message}`,
+            );
             console.warn(`WARN: [Repair Check] Original string args:`, args);
             // No repair attempted here, just logging.
           }
-        } else if (typeof args === 'object' && args !== null) {
+        } else if (typeof args === "object" && args !== null) {
           console.log(`INFO: [Repair Check] Args for ${toolCall.toolName} is an object.`);
           // Further validation could happen here, but keeping it simple to avoid type issues.
         } else {
@@ -327,7 +328,7 @@ export async function runAIAgent(exploreRun: ExploreRun) {
         // This hook now primarily serves as a logging/observation point.
 
         // Return the original tool call, letting the tool execution handle potential errors.
-        return toolCall; 
+        return toolCall;
       },
       onStepFinish: async (stepResult) => {
         stepCounter++; // Increment step counter
@@ -337,7 +338,7 @@ export async function runAIAgent(exploreRun: ExploreRun) {
         fullLog.onStepFinishLogs.push(`  Tool Calls: ${JSON.stringify(stepResult.toolCalls)}`);
         fullLog.onStepFinishLogs.push(`  Tool Results: ${JSON.stringify(stepResult.toolResults)}`);
         fullLog.onStepFinishLogs.push(`  Usage: ${JSON.stringify(stepResult.usage)}`);
-      }
+      },
     });
 
     // Add to log collection
@@ -394,7 +395,7 @@ export async function runAIAgent(exploreRun: ExploreRun) {
   steps.forEach((step, i) => {
     // Capture final step details for the log file
     fullLog.onStepFinishLogs.push(`--- Final Loop: Step ${i + 1} (${step.stepType}) ---`);
-    fullLog.onStepFinishLogs.push(`  Full Details: ${JSON.stringify(step)}`); 
+    fullLog.onStepFinishLogs.push(`  Full Details: ${JSON.stringify(step)}`);
 
     // Add to log collection with more detailed information (for structured stepDetails section)
     fullLog.stepDetails.push({
