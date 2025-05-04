@@ -14,7 +14,7 @@ export default function Hero() {
         <div className="relative aspect-video w-full max-w-2xl">
           <iframe
             className="absolute top-0 left-0 h-full w-full rounded-lg shadow-lg"
-            src="https://www.youtube.com/embed/LKgAx7FWva4"
+            src="https://www.youtube.com/embed/NpEaa2P7qZI"
             title="YouTube video player"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
             allowFullScreen

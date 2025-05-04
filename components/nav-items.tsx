@@ -10,9 +10,6 @@ const NavItems = () => {
       <Link href={"/explore_runs"} className={path.includes("/explore_runs") ? "font-medium text-slate-900" : ""}>
         Generate Tests
       </Link>
-      <Link href={"/tests"} className={path.includes("/tests") ? "font-medium text-slate-900" : ""}>
-        My Tests
-      </Link>
     </div>
   );
 };
