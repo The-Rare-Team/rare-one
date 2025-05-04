@@ -265,23 +265,68 @@ export async function runAIAgent(exploreRun: ExploreRun) {
       abortSignal: controller.signal, // Pass the abort signal
       experimental_telemetry: { isEnabled: true }, // Enable OpenTelemetry
       experimental_prepareStep: async (step) => {
-        const lastStep = step.steps[step.steps.length - 1];
+        // Boilerplate for experimental_prepareStep
+        console.log(`INFO: Preparing Step Number: ${step.stepNumber}`);
 
-        if (lastStep?.toolCalls && Array.isArray(lastStep.toolCalls)) {
-          const didSubmit = lastStep.toolCalls.some(isSubmitAttempt);
+        // Access previous steps and messages:
+        const previousSteps = step.steps; // Array of StepResult objects from previous steps
+        // const allMessages = step.messages; // Full message history - Removed, not directly available in step object
+        const lastStep = previousSteps[previousSteps.length - 1];
 
-          if (didSubmit) {
-            console.log("INFO: Submit attempt detected in last step. Restricting next tools to snapshot/wait.");
-            return {
-              experimental_activeTools: ['browser_snapshot', 'browser_wait'],
-              // Optionally force snapshot if needed, but restricting tools is often enough:
-              // toolChoice: { type: 'tool', toolName: 'browser_snapshot' }
-            };
-          }
+        // Example: Log tool calls from the last step (if any)
+        if (lastStep?.toolCalls && lastStep.toolCalls.length > 0) {
+          console.log("INFO: Tool calls in last step:", lastStep.toolCalls);
         }
 
-        // No override needed, continue with default tools/model
-        return {};
+        // --- Decision Logic --- 
+        // Based on previousSteps or stepNumber, decide if overrides are needed.
+        let overrideModel: any = undefined; // Or potentially openai('gpt-3.5-turbo') etc.
+        let overrideToolChoice: any = undefined; // Or { type: 'tool', toolName: '...' }, { type: 'required' }, etc.
+        let overrideActiveTools: string[] | undefined = undefined; // Or ['toolA', 'toolB']
+
+        // Example Condition: Switch to a specific tool after step 5
+        // if (step.stepNumber > 5) {
+        //   console.log("INFO: Forcing specific tool after step 5");
+        //   overrideToolChoice = { type: 'tool', toolName: 'browser_snapshot' }; 
+        //   overrideActiveTools = ['browser_snapshot', 'browser_wait'];
+        // }
+
+        // --- Return Overrides --- 
+        // Only include properties you want to override for the *next* step.
+        // Returning an empty object means no overrides.
+        const overrides: any = {};
+        if (overrideModel) overrides.model = overrideModel;
+        if (overrideToolChoice) overrides.toolChoice = overrideToolChoice;
+        if (overrideActiveTools) overrides.experimental_activeTools = overrideActiveTools;
+
+        return overrides;
+      },
+      experimental_repairToolCall: async ({ toolCall }) => {
+        console.log(`INFO: [Repair Check] Checking tool call for ${toolCall.toolName}`);
+        const { args } = toolCall;
+
+        // Basic check: Log argument type and attempt JSON parse if string
+        if (typeof args === 'string') {
+          try {
+            JSON.parse(args);
+            console.log(`INFO: [Repair Check] Args for ${toolCall.toolName} is a valid JSON string.`);
+          } catch (error: any) {
+            console.warn(`WARN: [Repair Check] Args for ${toolCall.toolName} is a string but failed JSON parsing: ${error.message}`);
+            console.warn(`WARN: [Repair Check] Original string args:`, args);
+            // No repair attempted here, just logging.
+          }
+        } else if (typeof args === 'object' && args !== null) {
+          console.log(`INFO: [Repair Check] Args for ${toolCall.toolName} is an object.`);
+          // Further validation could happen here, but keeping it simple to avoid type issues.
+        } else {
+          console.log(`INFO: [Repair Check] Args for ${toolCall.toolName} is of type: ${typeof args}`);
+        }
+
+        // !! No complex validation or repair logic implemented here due to type complexity !!
+        // This hook now primarily serves as a logging/observation point.
+
+        // Return the original tool call, letting the tool execution handle potential errors.
+        return toolCall; 
       },
       onStepFinish: async (stepResult) => {
         stepCounter++; // Increment step counter
