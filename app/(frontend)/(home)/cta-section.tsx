@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 export default function CTASection() {
   return (
@@ -14,8 +15,10 @@ export default function CTASection() {
               Get Early Access
             </a>
           </Button>
-          <Button variant="outline" className="rounded-lg px-6 py-6 text-lg">
-            Request Demo
+          <Button variant="outline" className="rounded-lg px-6 py-6 text-lg" asChild>
+            <Link target="_blank" href="https://calendar.app.google/rEVV34yx8janoZkSA">
+              Request Demo
+            </Link>
           </Button>
         </div>
       </div>
