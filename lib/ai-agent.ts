@@ -218,6 +218,15 @@ export async function runAIAgent(exploreRun: ExploreRun) {
 
   let text, steps, toolCalls, toolResults, output, reasoning, sources, finishReason, usage;
   let stepCounter = 0; // Initialize step counter
+
+  // Timeout setup
+  const controller = new AbortController();
+  const timeoutDuration = 10 * 60 * 1000; // 10 minutes in milliseconds
+  const timeoutId = setTimeout(() => {
+    console.warn(`Operation timed out after ${timeoutDuration / 60000} minutes. Aborting...`);
+    controller.abort();
+  }, timeoutDuration);
+
   try {
     // Define the model without the .withRetry() chain
     const model = openai("gpt-4.1-mini");
@@ -229,11 +238,12 @@ export async function runAIAgent(exploreRun: ExploreRun) {
       messages: [{ role: "user", content: userPrompt }],
       temperature: 0.1,
       maxTokens: 20000,
-      maxSteps: 60,
+      maxSteps: 100,
       frequencyPenalty: 0.2, // to avoid repeating same lines or phrases
       experimental_continueSteps: true, // Enables only full tokens to be streamed out 
       experimental_output: Output.object({ schema: urlSchema }), // forces a json output 
       maxRetries: 5, // exponential back off 
+      abortSignal: controller.signal, // Pass the abort signal
       onStepFinish: async (stepResult) => {
         stepCounter++; // Increment step counter
         // Capture step info for the log file instead of console
@@ -290,6 +300,7 @@ export async function runAIAgent(exploreRun: ExploreRun) {
     // Rethrow the error after logging
     throw error;
   } finally {
+    clearTimeout(timeoutId); // Clear the timeout if operation finished or errored
     close();
   }
 
