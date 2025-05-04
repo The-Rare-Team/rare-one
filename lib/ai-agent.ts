@@ -5,6 +5,25 @@ import { ExploreRun } from "./generated/prisma/client";
 import { connectPlaywrightMCP } from "@/lib/browser-manager";
 import * as fs from "fs/promises";
 import * as path from "path";
+// import { ToolCallPart } from "@ai-sdk/provider"; // Import type if needed -- Removed due to type issue
+
+// Helper function to identify submit attempts
+function isSubmitAttempt(toolCall: any): boolean {
+  if (toolCall?.toolName !== 'browser_click') {
+    return false;
+  }
+  const selector = toolCall.args?.selector?.toLowerCase() || '';
+  // Basic check for common submit patterns in selectors or button text implied by selectors
+  const submitPatterns = /submit|continue|next|confirm|pay|order|checkout|complete|finish|add to cart/i;
+  if (submitPatterns.test(selector)) {
+    return true;
+  }
+  // Check for type="submit"
+  if (selector.includes('[type="submit"]')) {
+    return true;
+  }
+  return false;
+}
 
 // Helper function to write content to file
 async function writeToLogFile(exploreRun: ExploreRun, content: any) {
@@ -244,6 +263,26 @@ export async function runAIAgent(exploreRun: ExploreRun) {
       experimental_output: Output.object({ schema: urlSchema }), // forces a json output 
       maxRetries: 5, // exponential back off 
       abortSignal: controller.signal, // Pass the abort signal
+      experimental_telemetry: { isEnabled: true }, // Enable OpenTelemetry
+      experimental_prepareStep: async (step) => {
+        const lastStep = step.steps[step.steps.length - 1];
+
+        if (lastStep?.toolCalls && Array.isArray(lastStep.toolCalls)) {
+          const didSubmit = lastStep.toolCalls.some(isSubmitAttempt);
+
+          if (didSubmit) {
+            console.log("INFO: Submit attempt detected in last step. Restricting next tools to snapshot/wait.");
+            return {
+              experimental_activeTools: ['browser_snapshot', 'browser_wait'],
+              // Optionally force snapshot if needed, but restricting tools is often enough:
+              // toolChoice: { type: 'tool', toolName: 'browser_snapshot' }
+            };
+          }
+        }
+
+        // No override needed, continue with default tools/model
+        return {};
+      },
       onStepFinish: async (stepResult) => {
         stepCounter++; // Increment step counter
         // Capture step info for the log file instead of console
