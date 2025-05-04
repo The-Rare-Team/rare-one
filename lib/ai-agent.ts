@@ -1,10 +1,29 @@
-import { generateText, Output } from "ai";
+import { generateText, Output, CoreMessage } from "ai";
 import { openai } from "@ai-sdk/openai";
 import { z } from "zod";
 import { ExploreRun } from "./generated/prisma/client";
 import { connectPlaywrightMCP } from "@/lib/browser-manager";
 import * as fs from "fs/promises";
 import * as path from "path";
+// import { ToolCallPart } from "@ai-sdk/provider"; // Import type if needed -- Removed due to type issue
+
+// Helper function to identify submit attempts
+function isSubmitAttempt(toolCall: any): boolean {
+  if (toolCall?.toolName !== 'browser_click') {
+    return false;
+  }
+  const selector = toolCall.args?.selector?.toLowerCase() || '';
+  // Basic check for common submit patterns in selectors or button text implied by selectors
+  const submitPatterns = /submit|continue|next|confirm|pay|order|checkout|complete|finish|add to cart/i;
+  if (submitPatterns.test(selector)) {
+    return true;
+  }
+  // Check for type="submit"
+  if (selector.includes('[type="submit"]')) {
+    return true;
+  }
+  return false;
+}
 
 // Helper function to write content to file
 async function writeToLogFile(exploreRun: ExploreRun, content: any) {
@@ -94,20 +113,12 @@ async function writeToLogFile(exploreRun: ExploreRun, content: any) {
     });
   }
 
-  // Add rate limit information if present
-  if (content.rateLimitInfo) {
-    logParts.push(`\n\n=== RATE LIMIT INFORMATION ===`);
-    logParts.push(`Total Retry Attempts: ${content.rateLimitInfo.totalRetries || 0}`);
-
-    if (content.rateLimitInfo.retryEvents && content.rateLimitInfo.retryEvents.length > 0) {
-      logParts.push(`\nRetry Events:`);
-      content.rateLimitInfo.retryEvents.forEach((event: any, idx: number) => {
-        logParts.push(`  Event ${idx + 1}:`);
-        logParts.push(`    Time: ${event.time}`);
-        logParts.push(`    Delay: ${event.delayMs}ms`);
-        logParts.push(`    Reason: ${event.reason || "Unknown"}`);
-      });
-    }
+  // Add the real-time logs from onStepFinish
+  if (content.onStepFinishLogs && content.onStepFinishLogs.length > 0) {
+    logParts.push(`\n\n=== REAL-TIME STEP LOGS (from onStepFinish & final loop) ===`);
+    content.onStepFinishLogs.forEach((logEntry: string) => {
+      logParts.push(logEntry);
+    });
   }
 
   // Add raw data in JSON format at the end for reference
@@ -143,113 +154,34 @@ const urlSchema = z.object({
   finalUrl: z.string().url().describe("The final URL after all actions are completed."),
 });
 
-// Helper function to implement exponential backoff for API calls
-/**
- * Executes a function with exponential backoff retry for API rate limit errors.
- * This specifically handles OpenAI's 429 rate limit errors by:
- * 1. Detecting rate limit errors through status codes or error messages
- * 2. Using the server's retry-after header when available
- * 3. Implementing exponential backoff with a maximum delay cap
- * 4. Limiting total retry attempts
- */
-async function withExponentialBackoff<T>(
-  fn: () => Promise<T>,
-  maxRetries = 5,
-  initialDelayMs = 1000,
-  maxDelayMs = 30000,
-  rateLimitInfo?: { totalRetries: number; retryEvents: any[] },
-): Promise<T> {
-  let retries = 0;
-  let delay = initialDelayMs;
-
-  while (true) {
-    try {
-      return await fn();
-    } catch (error: any) {
-      // Handle different error object structures
-      // The AI SDK can wrap errors in different ways
-      const originalError = error?.lastError || error;
-
-      // Check if it's a rate limit error (429)
-      const isRateLimit =
-        originalError?.statusCode === 429 ||
-        originalError?.data?.error?.code === "rate_limit_exceeded" ||
-        error?.message?.includes("rate limit") ||
-        originalError?.message?.includes("rate limit");
-
-      if (!isRateLimit || retries >= maxRetries) {
-        // Rethrow if not a rate limit error or if we've exceeded max retries
-        console.log(`Error not retryable or max retries (${maxRetries}) exceeded:`, error);
-        throw error;
-      }
-
-      // Extract retry-after from headers if available
-      let retryAfterMs = delay;
-
-      // Try different paths to find the retry-after value
-      const headers = originalError?.responseHeaders || {};
-
-      if (headers["retry-after-ms"]) {
-        retryAfterMs = Number(headers["retry-after-ms"]);
-      } else if (headers["retry-after"]) {
-        retryAfterMs = Number(headers["retry-after"]) * 1000;
-      } else if (originalError?.data?.error?.message) {
-        // Try to extract seconds from the error message
-        const match = originalError.data.error.message.match(/try again in (\d+\.?\d*)s/i);
-        if (match && match[1]) {
-          retryAfterMs = Number(match[1]) * 1000;
-        }
-      }
-
-      // Track retry information if rateLimitInfo is provided
-      if (rateLimitInfo) {
-        rateLimitInfo.totalRetries++;
-        rateLimitInfo.retryEvents.push({
-          time: new Date().toISOString(),
-          delayMs: retryAfterMs,
-          reason: originalError?.data?.error?.message || error?.message || "Rate limit exceeded",
-          attempt: retries + 1,
-        });
-      }
-
-      // Log the retry attempt with detailed information
-      console.log(`Rate limit hit. Retrying in ${retryAfterMs / 1000}s (attempt ${retries + 1}/${maxRetries})`);
-      console.log(`Rate limit details: ${originalError?.data?.error?.message || "No detailed message"}`);
-
-      // Wait for the specified delay
-      await new Promise((resolve) => setTimeout(resolve, retryAfterMs));
-
-      // Increase the delay for the next retry (exponential backoff)
-      delay = Math.min(delay * 2, maxDelayMs);
-      retries++;
-    }
-  }
-}
 
 export async function runAIAgent(exploreRun: ExploreRun) {
   const url = exploreRun.url;
   const { tools, close } = await connectPlaywrightMCP(exploreRun.cdpEndpoint);
 
   const systemPrompt = `
-  You are a senior QA engineer and Playwright MCP specialist. Your job is to drive an autonomous "expert tester" that uses only the Playwright MCP tools provided. Your main goal is to complete any form submission journey from start to finish, calling exactly one browser tool at a time, then waiting 1 second, then taking a new snapshot before any further action.
-  
+  You are a senior QA engineer and Playwright MCP specialist. Your job is to drive an autonomous "expert tester" that uses only the Playwright MCP tools provided. Your main goal is to complete any form submission journey from start to finish, calling browser tools strategically.
+
   FORM COMPLETION STRATEGY:
   1. Start by taking an initial snapshot to identify the type of form.
   2. Identify required fields (* markers, required attributes, common patterns).
-  3. Fill each field with valid test data (emails, names, addresses, etc.).
-  4. After filling each logical group of fields, look for Next/Continue/Submit buttons before proceeding.
-  5. On validation errors: take snapshot, locate error messages, correct entries, retry submission.
-  
-  ACTION SEQUENCE RULE:
-  - **Only one** of [browser_navigate, browser_click, browser_type, browser_selectOption, browser_press] per step.
-  - Immediately after that tool call, invoke 'browser_wait({ ms: 1000 })'.
-  - Then invoke 'browser_snapshot()' before planning the next action.
-  
+  3. **Fill fields top-to-bottom:** Identify all visible input fields and fill them sequentially from the top of the page to the bottom, mimicking how a human would typically interact with the form. Use valid test data (emails, names, addresses, etc.). Fill related fields sequentially if it makes sense before taking a snapshot, especially if the UI seems stable.
+  4. After filling a logical group of fields or before critical actions (like submitting or navigating sections), take a snapshot ('browser_snapshot()') to verify the state.
+  5. **Error Handling (especially after clicking "Next" or Submit):**
+     - **Immediately after** clicking a button intended to submit or proceed (like "Next", "Submit", "Continue"), **call 'browser_snapshot()'**.
+     - **Analyze the snapshot:** Look for any validation error messages, warnings, or indicators that the submission failed or the page didn't advance as expected.
+     - **If errors are found:** Identify the fields causing errors, use 'browser_type' or other tools to correct the inputs, and then attempt the submission click again.
+     - **If no errors are found and the page advanced:** Continue with the next step in the form.
+  6. Use 'browser_wait({ ms: ... })' sparingly, only when you anticipate the page needing time to update (e.g., after navigation, form submission, or complex UI interactions). A short wait (e.g., 200-500ms) might suffice often. Default to no wait if unsure.
+
+  ACTION SEQUENCE GUIDELINES:
+  - Prioritize completing the task efficiently.
+  - Call 'browser_snapshot()' when you need to analyze the current page state to decide the next action, especially after navigation or potential UI updates.
+  - Call 'browser_wait({ms: ...})' *only* when necessary for the page to stabilize after an action. Avoid unnecessary waits.
+  - You can call multiple 'browser_type' or similar simple actions before the next snapshot if the form structure allows.
+
   DEALING WITH DYNAMIC CONTENT:
-  - Always follow any interaction with:
-     1. 'browser_wait({ms:1000})'
-     2. 'browser_snapshot()'
-  - If you get stale references, retry on the fresh snapshot.
+  - If an action fails or the page state seems incorrect (e.g., stale references), use 'browser_snapshot()' to get the latest view before retrying or planning the next step. A short 'browser_wait' might be needed before the snapshot if the failure was likely due to timing.
 
 
   At the end, output this JSON object (no extra text):
@@ -271,27 +203,26 @@ export async function runAIAgent(exploreRun: ExploreRun) {
   const userPrompt = `
   Given URL: ${url}
 
-  1. Call exactly **one** browser tool per loop iteration:
-    a. Take snapshot: 'browser_snapshot()'
-    b. Analyze form or page state.
-    c. If interacting, choose one of:
-        - 'browser_navigate(...)'
-        - 'browser_click(...)'
-        - 'browser_type(...)'
-        - 'browser_selectOption(...)'
-        - 'browser_press(...)'
-    d. Immediately call 'browser_wait({ms:1000})'
-    e. Immediately call 'browser_snapshot()'
-  2. Repeat until:
-    - Form is successfully submitted (detect success message/page), or
-    - No further meaningful actions are possible.
-  3. Meanwhile, record each action into your journey array and build stepsSummary.
-  4. When done, emit exactly the JSON schema with keys:
+  Follow the FORM COMPLETION STRATEGY and ACTION SEQUENCE GUIDELINES from the system prompt.
+  1. Use browser tools like 'browser_snapshot()', 'browser_navigate(...)', 'browser_click(...)', 'browser_type(...)', 'browser_selectOption(...)', 'browser_press(...)'.
+  2. Use 'browser_wait({ms: ...})' only when needed for page stabilization (e.g., 200-500ms, or longer if required after navigation/submission).
+  3. Use 'browser_snapshot()' strategically to observe results and plan next steps, not necessarily after every single action.
+  4. Repeat until:
+     - Form is successfully submitted (detect success message/page), or
+     - No further meaningful actions are possible.
+  5. Record each action into your journey array and build stepsSummary.
+  6. When done, emit exactly the JSON schema with keys:
     - siteDescription
     - journey
     - stepsSummary
     - finalUrl
   `.trim();
+
+  // Prepare messages array
+  const initialMessages: CoreMessage[] = [
+    { role: "system", content: systemPrompt },
+    { role: "user", content: userPrompt },
+  ];
 
   // Prepare a log collection object to gather all outputs
   const fullLog: Record<string, any> = {
@@ -304,49 +235,113 @@ export async function runAIAgent(exploreRun: ExploreRun) {
       system: systemPrompt,
       user: userPrompt,
     },
-    rateLimitInfo: {
-      totalRetries: 0,
-      retryEvents: [],
-    },
+    onStepFinishLogs: [], // Initialize array for onStepFinish logs
   };
 
   let text, steps, toolCalls, toolResults, output, reasoning, sources, finishReason, usage;
-  try {
-    // Create a counter for retries that the withExponentialBackoff function can modify
-    const retryCounter = { count: 0, events: [] };
+  let stepCounter = 0; // Initialize step counter
 
-    // Store the complete result first - Now with exponential backoff
-    const result = await withExponentialBackoff(
-      async () => {
-        console.log("Attempting generateText call...");
-        return generateText({
-          model: openai("gpt-4.1-mini"), // Upgraded to more capable model "gpt-4o"
-          system: systemPrompt,
-          tools,
-          messages: [{ role: "user", content: userPrompt }],
-          temperature: 0.1,
-          maxTokens: 20000,
-          maxSteps: 35,
-          experimental_continueSteps: true,
-          experimental_output: Output.object({ schema: urlSchema }),
-        });
+  // Timeout setup
+  const controller = new AbortController();
+  const timeoutDuration = 10 * 60 * 1000; // 10 minutes in milliseconds
+  const timeoutId = setTimeout(() => {
+    console.warn(`Operation timed out after ${timeoutDuration / 60000} minutes. Aborting...`);
+    controller.abort();
+  }, timeoutDuration);
+
+  try {
+    // Define the model without the .withRetry() chain
+    const model = openai("gpt-4.1-mini");
+
+    const result = await generateText({
+      model, // Pass the base model instance
+      messages: initialMessages, // Use messages array
+      tools,
+      temperature: 0.1,
+      maxTokens: 20000,
+      maxSteps: 100, // Keeping maxSteps > 1 for now
+      frequencyPenalty: 0.2, // to avoid repeating same lines or phrases
+      experimental_continueSteps: true, // Enables only full tokens to be streamed out 
+      experimental_output: Output.object({ schema: urlSchema }), // forces a json output 
+      maxRetries: 5, // exponential back off 
+      abortSignal: controller.signal, // Pass the abort signal
+      experimental_telemetry: { isEnabled: true }, // Enable OpenTelemetry
+      experimental_prepareStep: async (step) => {
+        // Boilerplate for experimental_prepareStep
+        console.log(`INFO: Preparing Step Number: ${step.stepNumber}`);
+
+        // Access previous steps and messages:
+        const previousSteps = step.steps; // Array of StepResult objects from previous steps
+        // const allMessages = step.messages; // Full message history - Removed, not directly available in step object
+        const lastStep = previousSteps[previousSteps.length - 1];
+
+        // Example: Log tool calls from the last step (if any)
+        if (lastStep?.toolCalls && lastStep.toolCalls.length > 0) {
+          console.log("INFO: Tool calls in last step:", lastStep.toolCalls);
+        }
+
+        // --- Decision Logic --- 
+        // Based on previousSteps or stepNumber, decide if overrides are needed.
+        let overrideModel: any = undefined; // Or potentially openai('gpt-3.5-turbo') etc.
+        let overrideToolChoice: any = undefined; // Or { type: 'tool', toolName: '...' }, { type: 'required' }, etc.
+        let overrideActiveTools: string[] | undefined = undefined; // Or ['toolA', 'toolB']
+
+        // Example Condition: Switch to a specific tool after step 5
+        // if (step.stepNumber > 5) {
+        //   console.log("INFO: Forcing specific tool after step 5");
+        //   overrideToolChoice = { type: 'tool', toolName: 'browser_snapshot' }; 
+        //   overrideActiveTools = ['browser_snapshot', 'browser_wait'];
+        // }
+
+        // --- Return Overrides --- 
+        // Only include properties you want to override for the *next* step.
+        // Returning an empty object means no overrides.
+        const overrides: any = {};
+        if (overrideModel) overrides.model = overrideModel;
+        if (overrideToolChoice) overrides.toolChoice = overrideToolChoice;
+        if (overrideActiveTools) overrides.experimental_activeTools = overrideActiveTools;
+
+        return overrides;
       },
-      5,
-      2000,
-      60000,
-      fullLog.rateLimitInfo,
-    );
+      experimental_repairToolCall: async ({ toolCall }) => {
+        console.log(`INFO: [Repair Check] Checking tool call for ${toolCall.toolName}`);
+        const { args } = toolCall;
+
+        // Basic check: Log argument type and attempt JSON parse if string
+        if (typeof args === 'string') {
+          try {
+            JSON.parse(args);
+            console.log(`INFO: [Repair Check] Args for ${toolCall.toolName} is a valid JSON string.`);
+          } catch (error: any) {
+            console.warn(`WARN: [Repair Check] Args for ${toolCall.toolName} is a string but failed JSON parsing: ${error.message}`);
+            console.warn(`WARN: [Repair Check] Original string args:`, args);
+            // No repair attempted here, just logging.
+          }
+        } else if (typeof args === 'object' && args !== null) {
+          console.log(`INFO: [Repair Check] Args for ${toolCall.toolName} is an object.`);
+          // Further validation could happen here, but keeping it simple to avoid type issues.
+        } else {
+          console.log(`INFO: [Repair Check] Args for ${toolCall.toolName} is of type: ${typeof args}`);
+        }
+
+        // This hook now primarily serves as a logging/observation point.
+
+        // Return the original tool call, letting the tool execution handle potential errors.
+        return toolCall; 
+      },
+      onStepFinish: async (stepResult) => {
+        stepCounter++; // Increment step counter
+        // Capture step info for the log file instead of console
+        fullLog.onStepFinishLogs.push(`--- onStepFinish: Step ${stepCounter} ---`);
+        fullLog.onStepFinishLogs.push(`  Finish Reason: ${JSON.stringify(stepResult.finishReason)}`);
+        fullLog.onStepFinishLogs.push(`  Tool Calls: ${JSON.stringify(stepResult.toolCalls)}`);
+        fullLog.onStepFinishLogs.push(`  Tool Results: ${JSON.stringify(stepResult.toolResults)}`);
+        fullLog.onStepFinishLogs.push(`  Usage: ${JSON.stringify(stepResult.usage)}`);
+      }
+    });
 
     // Add to log collection
     fullLog.rawResult = result;
-
-    // Log response headers and body
-    console.log("=== Results ===");
-    console.log(JSON.stringify(result, null, 2));
-    console.log("=== Response Headers ===");
-    console.log(JSON.stringify(result.response?.headers, null, 2));
-    console.log("=== Response Body ===");
-    console.log(JSON.stringify(result.response?.body, null, 2));
 
     // Destructure the properties we need
     ({
@@ -390,19 +385,18 @@ export async function runAIAgent(exploreRun: ExploreRun) {
     // Rethrow the error after logging
     throw error;
   } finally {
+    clearTimeout(timeoutId); // Clear the timeout if operation finished or errored
     close();
   }
 
   // Add steps data to log collection
   fullLog.stepDetails = [];
   steps.forEach((step, i) => {
-    console.log(`\n--- STEP ${i + 1} (${step.stepType}) ---`);
-    console.log("THE step:", step);
-    console.log("finishReason:", step.finishReason);
-    console.log("toolCalls:", step.toolCalls);
-    console.log("toolResults:", step.toolResults);
+    // Capture final step details for the log file
+    fullLog.onStepFinishLogs.push(`--- Final Loop: Step ${i + 1} (${step.stepType}) ---`);
+    fullLog.onStepFinishLogs.push(`  Full Details: ${JSON.stringify(step)}`); 
 
-    // Add to log collection with more detailed information
+    // Add to log collection with more detailed information (for structured stepDetails section)
     fullLog.stepDetails.push({
       stepNumber: i + 1,
       stepType: step.stepType,
