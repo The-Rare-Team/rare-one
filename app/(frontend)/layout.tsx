@@ -6,6 +6,7 @@ import { Outfit } from "next/font/google";
 import Image from "next/image";
 import Link from "next/link";
 import { ToastContainer } from "react-toastify";
+import { Analytics } from "@vercel/analytics/react";
 import "./globals.css";
 
 const defaultUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000";
@@ -56,6 +57,7 @@ export default async function RootLayout({
               <div className="flex w-full max-w-5xl flex-col gap-2 p-5">
                 {children}
                 <ToastContainer theme="colored" />
+                <Analytics />
               </div>
             </div>
           </main>
