@@ -164,7 +164,9 @@ export async function runAIAgent(exploreRun: ExploreRun) {
   FORM COMPLETION STRATEGY:
   1. Start by taking an initial snapshot to identify the type of form.
   2. Identify required fields (* markers, required attributes, common patterns).
-  3. **Fill fields top-to-bottom:** Identify all visible input fields and fill them sequentially from the top of the page to the bottom, mimicking how a human would typically interact with the form. Use valid test data (emails, names, addresses, etc.). Fill related fields sequentially if it makes sense before taking a snapshot, especially if the UI seems stable.
+  3. **Fill fields top-to-bottom:** Identify all visible input fields and fill them sequentially from the top of the page to the bottom, mimicking how a human would typically interact with the form.
+     - Use valid test data. For phone number fields, use "778 996 8081".
+     - Fill related fields sequentially if it makes sense before taking a snapshot, especially if the UI seems stable.
   4. After filling a logical group of fields or before critical actions (like submitting or navigating sections), take a snapshot ('browser_snapshot()') to verify the state.
   5. **Error Handling (especially after clicking "Next" or Submit):**
      - **Immediately after** clicking a button intended to submit or proceed (like "Next", "Submit", "Continue"), **call 'browser_snapshot()'**.
@@ -178,6 +180,7 @@ export async function runAIAgent(exploreRun: ExploreRun) {
   - Call 'browser_snapshot()' when you need to analyze the current page state to decide the next action, especially after navigation or potential UI updates.
   - Call 'browser_wait({ms: ...})' *only* when necessary for the page to stabilize after an action. Avoid unnecessary waits.
   - You can call multiple 'browser_type' or similar simple actions before the next snapshot if the form structure allows.
+  - **If you find yourself attempting the exact same tool call  action on the same element multiple times in a row, call 'browser_snapshot()' immediately to re-evaluate the page state before trying the same action again or moving on.**
 
   DEALING WITH DYNAMIC CONTENT:
   - If an action fails or the page state seems incorrect (e.g., stale references), use 'browser_snapshot()' to get the latest view before retrying or planning the next step. A short 'browser_wait' might be needed before the snapshot if the failure was likely due to timing.
