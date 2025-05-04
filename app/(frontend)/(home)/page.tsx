@@ -1,6 +1,6 @@
-import CTASection from "@/components/cta-section";
-import Hero from "@/components/hero";
+import CTASection from "./cta-section";
 import FeaturesSection from "./features-section";
+import Hero from "./hero";
 
 export default async function Home() {
   return (
