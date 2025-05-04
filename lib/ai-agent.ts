@@ -160,25 +160,28 @@ export async function runAIAgent(exploreRun: ExploreRun) {
   const { tools, close } = await connectPlaywrightMCP(exploreRun.cdpEndpoint);
 
   const systemPrompt = `
-  You are a senior QA engineer and Playwright MCP specialist. Your job is to drive an autonomous "expert tester" that uses only the Playwright MCP tools provided. Your main goal is to complete any form submission journey from start to finish, calling exactly one browser tool at a time, then waiting 1 second, then taking a new snapshot before any further action.
-  
+  You are a senior QA engineer and Playwright MCP specialist. Your job is to drive an autonomous "expert tester" that uses only the Playwright MCP tools provided. Your main goal is to complete any form submission journey from start to finish, calling browser tools strategically.
+
   FORM COMPLETION STRATEGY:
   1. Start by taking an initial snapshot to identify the type of form.
   2. Identify required fields (* markers, required attributes, common patterns).
-  3. Fill each field with valid test data (emails, names, addresses, etc.).
-  4. After filling each logical group of fields, look for Next/Continue/Submit buttons before proceeding.
-  5. On validation errors: take snapshot, locate error messages, correct entries, retry submission.
-  
-  ACTION SEQUENCE RULE:
-  - **Only one** of [browser_navigate, browser_click, browser_type, browser_selectOption, browser_press] per step.
-  - Immediately after that tool call, invoke 'browser_wait({ ms: 1000 })'.
-  - Then invoke 'browser_snapshot()' before planning the next action.
-  
+  3. **Fill fields top-to-bottom:** Identify all visible input fields and fill them sequentially from the top of the page to the bottom, mimicking how a human would typically interact with the form. Use valid test data (emails, names, addresses, etc.). Fill related fields sequentially if it makes sense before taking a snapshot, especially if the UI seems stable.
+  4. After filling a logical group of fields or before critical actions (like submitting or navigating sections), take a snapshot ('browser_snapshot()') to verify the state.
+  5. **Error Handling (especially after clicking "Next" or Submit):**
+     - **Immediately after** clicking a button intended to submit or proceed (like "Next", "Submit", "Continue"), **call 'browser_snapshot()'**.
+     - **Analyze the snapshot:** Look for any validation error messages, warnings, or indicators that the submission failed or the page didn't advance as expected.
+     - **If errors are found:** Identify the fields causing errors, use 'browser_type' or other tools to correct the inputs, and then attempt the submission click again.
+     - **If no errors are found and the page advanced:** Continue with the next step in the form.
+  6. Use 'browser_wait({ ms: ... })' sparingly, only when you anticipate the page needing time to update (e.g., after navigation, form submission, or complex UI interactions). A short wait (e.g., 200-500ms) might suffice often. Default to no wait if unsure.
+
+  ACTION SEQUENCE GUIDELINES:
+  - Prioritize completing the task efficiently.
+  - Call 'browser_snapshot()' when you need to analyze the current page state to decide the next action, especially after navigation or potential UI updates.
+  - Call 'browser_wait({ms: ...})' *only* when necessary for the page to stabilize after an action. Avoid unnecessary waits.
+  - You can call multiple 'browser_type' or similar simple actions before the next snapshot if the form structure allows.
+
   DEALING WITH DYNAMIC CONTENT:
-  - Always follow any interaction with:
-     1. 'browser_wait({ms:1000})'
-     2. 'browser_snapshot()'
-  - If you get stale references, retry on the fresh snapshot.
+  - If an action fails or the page state seems incorrect (e.g., stale references), use 'browser_snapshot()' to get the latest view before retrying or planning the next step. A short 'browser_wait' might be needed before the snapshot if the failure was likely due to timing.
 
 
   At the end, output this JSON object (no extra text):
@@ -200,22 +203,15 @@ export async function runAIAgent(exploreRun: ExploreRun) {
   const userPrompt = `
   Given URL: ${url}
 
-  1. Call exactly **one** browser tool per loop iteration:
-    a. Take snapshot: 'browser_snapshot()'
-    b. Analyze form or page state.
-    c. If interacting, choose one of:
-        - 'browser_navigate(...)'
-        - 'browser_click(...)'
-        - 'browser_type(...)'
-        - 'browser_selectOption(...)'
-        - 'browser_press(...)'
-    d. Immediately call 'browser_wait({ms:1000})'
-    e. Immediately call 'browser_snapshot()'
-  2. Repeat until:
-    - Form is successfully submitted (detect success message/page), or
-    - No further meaningful actions are possible.
-  3. Meanwhile, record each action into your journey array and build stepsSummary.
-  4. When done, emit exactly the JSON schema with keys:
+  Follow the FORM COMPLETION STRATEGY and ACTION SEQUENCE GUIDELINES from the system prompt.
+  1. Use browser tools like 'browser_snapshot()', 'browser_navigate(...)', 'browser_click(...)', 'browser_type(...)', 'browser_selectOption(...)', 'browser_press(...)'.
+  2. Use 'browser_wait({ms: ...})' only when needed for page stabilization (e.g., 200-500ms, or longer if required after navigation/submission).
+  3. Use 'browser_snapshot()' strategically to observe results and plan next steps, not necessarily after every single action.
+  4. Repeat until:
+     - Form is successfully submitted (detect success message/page), or
+     - No further meaningful actions are possible.
+  5. Record each action into your journey array and build stepsSummary.
+  6. When done, emit exactly the JSON schema with keys:
     - siteDescription
     - journey
     - stepsSummary
