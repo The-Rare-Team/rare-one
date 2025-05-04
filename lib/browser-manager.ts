@@ -11,7 +11,12 @@ interface BroswerSession {
 
 export async function startSession(): Promise<BroswerSession> {
   const bb = new Browserbase({ apiKey: process.env.BROWSERBASE_API_KEY });
-  const session = await bb.sessions.create({ projectId: process.env.BROWSERBASE_PROJECT_ID! });
+  const session = await bb.sessions.create({
+    projectId: process.env.BROWSERBASE_PROJECT_ID!,
+    browserSettings: {
+      viewport: { width: 1920, height: 1080 },
+    },
+  });
 
   const liveViewLinks = await bb.sessions.debug(session.id);
   const liveViewLink = liveViewLinks.debuggerFullscreenUrl;
