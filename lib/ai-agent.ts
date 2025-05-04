@@ -281,9 +281,9 @@ export async function runAIAgent(exploreRun: ExploreRun) {
 
         // --- Decision Logic ---
         // Based on previousSteps or stepNumber, decide if overrides are needed.
-        let overrideModel: any = undefined; // Or potentially openai('gpt-3.5-turbo') etc.
-        let overrideToolChoice: any = undefined; // Or { type: 'tool', toolName: '...' }, { type: 'required' }, etc.
-        let overrideActiveTools: string[] | undefined = undefined; // Or ['toolA', 'toolB']
+        const overrideModel: any = undefined; // Or potentially openai('gpt-3.5-turbo') etc.
+        const overrideToolChoice: any = undefined; // Or { type: 'tool', toolName: '...' }, { type: 'required' }, etc.
+        const overrideActiveTools: string[] | undefined = undefined; // Or ['toolA', 'toolB']
 
         // Example Condition: Switch to a specific tool after step 5
         // if (step.stepNumber > 5) {
