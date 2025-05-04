@@ -1,4 +1,4 @@
-import { generateText, Output } from "ai";
+import { generateText, Output, CoreMessage } from "ai";
 import { openai } from "@ai-sdk/openai";
 import { z } from "zod";
 import { ExploreRun } from "./generated/prisma/client";
@@ -154,6 +154,7 @@ const urlSchema = z.object({
   finalUrl: z.string().url().describe("The final URL after all actions are completed."),
 });
 
+
 export async function runAIAgent(exploreRun: ExploreRun) {
   const url = exploreRun.url;
   const { tools, close } = await connectPlaywrightMCP(exploreRun.cdpEndpoint);
@@ -221,6 +222,12 @@ export async function runAIAgent(exploreRun: ExploreRun) {
     - finalUrl
   `.trim();
 
+  // Prepare messages array
+  const initialMessages: CoreMessage[] = [
+    { role: "system", content: systemPrompt },
+    { role: "user", content: userPrompt },
+  ];
+
   // Prepare a log collection object to gather all outputs
   const fullLog: Record<string, any> = {
     initialData: {
@@ -252,12 +259,11 @@ export async function runAIAgent(exploreRun: ExploreRun) {
 
     const result = await generateText({
       model, // Pass the base model instance
-      system: systemPrompt,
+      messages: initialMessages, // Use messages array
       tools,
-      messages: [{ role: "user", content: userPrompt }],
       temperature: 0.1,
       maxTokens: 20000,
-      maxSteps: 100,
+      maxSteps: 100, // Keeping maxSteps > 1 for now
       frequencyPenalty: 0.2, // to avoid repeating same lines or phrases
       experimental_continueSteps: true, // Enables only full tokens to be streamed out 
       experimental_output: Output.object({ schema: urlSchema }), // forces a json output 
@@ -322,7 +328,6 @@ export async function runAIAgent(exploreRun: ExploreRun) {
           console.log(`INFO: [Repair Check] Args for ${toolCall.toolName} is of type: ${typeof args}`);
         }
 
-        // !! No complex validation or repair logic implemented here due to type complexity !!
         // This hook now primarily serves as a logging/observation point.
 
         // Return the original tool call, letting the tool execution handle potential errors.
