@@ -165,7 +165,7 @@ export async function runAIAgent(exploreRun: ExploreRun) {
   1. Start by taking an initial snapshot to identify the type of form.
   2. Identify required fields (* markers, required attributes, common patterns).
   3. **Fill fields top-to-bottom:** Identify all visible input fields and fill them sequentially from the top of the page to the bottom, mimicking how a human would typically interact with the form.
-     - Use valid test data. For phone number fields, use "778 996 8081".
+     - Use valid test data. For phone number fields, use "778 996 8081" for email use "amandazown@gmail.com".
      - Fill related fields sequentially if it makes sense before taking a snapshot, especially if the UI seems stable.
   4. After filling a logical group of fields or before critical actions (like submitting or navigating sections), take a snapshot ('browser_snapshot()') to verify the state.
   5. **Error Handling (especially after clicking "Next" or Submit):**
@@ -180,6 +180,7 @@ export async function runAIAgent(exploreRun: ExploreRun) {
   - Call 'browser_snapshot()' when you need to analyze the current page state to decide the next action, especially after navigation or potential UI updates.
   - Call 'browser_wait({ms: ...})' *only* when necessary for the page to stabilize after an action. Avoid unnecessary waits.
   - You can call multiple 'browser_type' or similar simple actions before the next snapshot if the form structure allows.
+  - **If you plan multiple actions (e.g., two 'browser_type' calls or a 'browser_type' followed by a 'browser_click') in the same reasoning step, consider adding a very short wait like 'browser_wait({ms: 100})' between these actions to allow the UI to potentially update.**
   - **If you find yourself attempting the exact same tool call  action on the same element multiple times in a row, call 'browser_snapshot()' immediately to re-evaluate the page state before trying the same action again or moving on.**
 
   DEALING WITH DYNAMIC CONTENT:
@@ -196,9 +197,9 @@ export async function runAIAgent(exploreRun: ExploreRun) {
          { "action": "selectOption","selector":"select#qty",   "values": [ "2" ]    },
          { "action": "press",       "key": "PageDown"         },
          { "action": "click",       "selector": "button#submit"}
-       ],
+       ], // IMPORTANT: Only include actions like 'navigate', 'click', 'type', 'selectOption', 'press'. Do NOT include 'wait' or 'snapshot' actions here.
        "stepsSummary": ["Step 1: Navigated to the homepage", "Step 2: Clicked the buy now button", ...],
-       "finalUrl": "<the URL you end up on>"
+       "finalUrl": "<the URL you end up on>" 
      }
   `.trim();
 
@@ -207,7 +208,7 @@ export async function runAIAgent(exploreRun: ExploreRun) {
 
   Follow the FORM COMPLETION STRATEGY and ACTION SEQUENCE GUIDELINES from the system prompt.
   1. Use browser tools like 'browser_snapshot()', 'browser_navigate(...)', 'browser_click(...)', 'browser_type(...)', 'browser_selectOption(...)', 'browser_press(...)'.
-  2. Use 'browser_wait({ms: ...})' only when needed for page stabilization (e.g., 200-500ms, or longer if required after navigation/submission).
+  2. Use 'browser_wait({ms: ...})' only when needed for page stabilization (e.g., 100-200ms, or longer if required after navigation/submission).
   3. Use 'browser_snapshot()' strategically to observe results and plan next steps, not necessarily after every single action.
   4. Repeat until:
      - Form is successfully submitted (detect success message/page), or
