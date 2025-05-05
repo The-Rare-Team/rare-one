@@ -13,7 +13,7 @@ const defaultUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` 
 
 export const metadata = {
   metadataBase: new URL(defaultUrl),
-  title: "Autonomous QA Teammate - The Rare One",
+  title: "AI teammate that makes sure your landing page is always up and running.",
 };
 
 const geistSans = Outfit({
