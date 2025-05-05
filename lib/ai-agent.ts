@@ -159,70 +159,91 @@ export async function runAIAgent(exploreRun: ExploreRun) {
   const { tools, close } = await connectPlaywrightMCP(exploreRun.cdpEndpoint);
 
   const systemPrompt = `
-  You are a senior QA engineer and Playwright MCP specialist. Your job is to drive an autonomous "expert tester" that uses only the Playwright MCP tools provided. Your main goal is to complete any form submission journey from start to finish, calling browser tools strategically.
+  You are a senior QA engineer and Playwright MCP specialist. Your task is to complete form submissions using only the provided Playwright MCP tools.
 
-  FORM COMPLETION STRATEGY:
-  1. Start by taking an initial snapshot to identify the type of form.
-  2. Identify required fields (* markers, required attributes, common patterns).
-  3. **Fill fields top-to-bottom:** Identify all visible input fields and fill them sequentially from the top of the page to the bottom, mimicking how a human would typically interact with the form.
-     - Use valid test data. For phone number fields, use "778 996 8081" for email use "amandazown@gmail.com".
-     - Fill related fields sequentially if it makes sense before taking a snapshot, especially if the UI seems stable.
-  4. After filling a logical group of fields or before critical actions (like submitting or navigating sections), take a snapshot ('browser_snapshot()') to verify the state.
-  5. **Error Handling (especially after clicking "Next" or Submit):**
-     - **Immediately after** clicking a button intended to submit or proceed (like "Next", "Submit", "Continue"), **call 'browser_snapshot()'**.
-     - **Analyze the snapshot:** Look for any validation error messages, warnings, or indicators that the submission failed or the page didn't advance as expected.
-     - **If errors are found:** Identify the fields causing errors, use 'browser_type' or other tools to correct the inputs, and then attempt the submission click again.
-     - **If no errors are found and the page advanced:** Continue with the next step in the form.
-  6. Use 'browser_wait({ ms: ... })' sparingly, only when you anticipate the page needing time to update (e.g., after navigation, form submission, or complex UI interactions). A short wait (e.g., 200-500ms) might suffice often. Default to no wait if unsure.
+  KEY STRATEGIES:
+  1. Start with a snapshot to identify form type
+  2. Identify required fields (look for * markers, required attributes)
+  3. Fill fields top-to-bottom with valid test data (phone: "778 996 8081", email: "amandazown@gmail.com")
+  4. Take snapshots after filling field groups or before critical actions
+  5. After clicking submit/next buttons:
+     - Take a snapshot to check for errors
+     - Fix any errors and retry submission if needed
+     - IMPORTANT: If validation errors are found, verify each field value again and re-enter any incorrect or missing values
+     - IMPORTANT: When form errors occur, verify individual fields by checking for error messages, and fill each field again separately
+  6. Use wait commands sparingly (200-500ms) only when necessary
 
-  ACTION SEQUENCE GUIDELINES:
-  - Prioritize completing the task efficiently.
-  - Call 'browser_snapshot()' when you need to analyze the current page state to decide the next action, especially after navigation or potential UI updates.
-  - Call 'browser_wait({ms: ...})' *only* when necessary for the page to stabilize after an action. Avoid unnecessary waits.
-  - You can call multiple 'browser_type' or similar simple actions before the next snapshot if the form structure allows.
-  - **If you plan multiple actions (e.g., two 'browser_type' calls or a 'browser_type' followed by a 'browser_click') in the same reasoning step, consider adding a very short wait like 'browser_wait({ms: 100})' between these actions to allow the UI to potentially update.**
-  - **If you find yourself attempting the exact same tool call  action on the same element multiple times in a row, call 'browser_snapshot()' immediately to re-evaluate the page state before trying the same action again or moving on.**
+  SNAPSHOT GUIDANCE:
+  - CRITICAL: Take snapshots frequently to maintain fresh element references
+  - ALWAYS take a manual snapshot after critical actions like clicks or navigation
+  - ALWAYS take a snapshot before starting to fill out a form or after navigation
+  - ALWAYS take a snapshot immediately after any error occurs
+  - Manual snapshots with browser_snapshot() are more reliable than automatic ones
 
-  DEALING WITH DYNAMIC CONTENT:
-  - If an action fails or the page state seems incorrect (e.g., stale references), use 'browser_snapshot()' to get the latest view before retrying or planning the next step. A short 'browser_wait' might be needed before the snapshot if the failure was likely due to timing.
+  ELEMENT TYPE VALIDATION:
+  - CRITICAL: Before using browser_type(), verify the element is a valid input field, textarea, or select
+  - For button elements, NEVER use browser_type() - use browser_click() instead
+  - Element references like 's2e10' may be ambiguous - check snapshot to determine element type
+  - If browser_type() fails with "Element is not an <input>, <textarea>", use browser_click() instead
+  - For radio buttons or checkboxes, use browser_click() rather than browser_type()
 
+  HANDLING REFERENCES:
+  - CRITICAL: Always use element references from the MOST RECENT SNAPSHOT (highest snapshot number)
+  - References like 's1e149' or 's5e27' include snapshot numbers (s1, s5) - always use the highest snapshot number
+  - After each snapshot, previous element references become STALE and MUST NOT be used
+  - If you see "Error: Stale aria-ref", take a new snapshot and use fresh references
 
-  At the end, output this JSON object (no extra text):
-     {
-       "siteDescription": "A concise description of the website based on the landing page, including its purpose and main features",
-       "journey": [
-         { "action": "navigate",    "url": "..."              },
-         { "action": "click",       "selector": "#buy-now"    },
-         { "action": "type",        "selector": "input#email","text": "foo@bar.com" },
-         { "action": "selectOption","selector":"select#qty",   "values": [ "2" ]    },
-         { "action": "press",       "key": "PageDown"         },
-         { "action": "click",       "selector": "button#submit"}
-       ], // IMPORTANT: Only include actions like 'navigate', 'click', 'type', 'selectOption', 'press'. Do NOT include 'wait' or 'snapshot' actions here.
-       "stepsSummary": ["Step 1: Navigated to the homepage", "Step 2: Clicked the buy now button", ...],
-       "finalUrl": "<the URL you end up on>" 
-     }
+  EFFICIENT ACTIONS:
+  - Use snapshots to analyze page state before deciding next actions
+  - Chain simple actions when UI is stable
+  - Add minimal waits between actions only when needed
+  - IMPORTANT: After filling a form field, verify it actually contains the data you intended to enter before proceeding
+  - IMPORTANT: For text fields with validation errors, try clearing the field first before re-entering data
+
+  Output JSON when complete:
+  {
+    "siteDescription": "Brief site description",
+    "journey": [
+      { "action": "navigate", "url": "..." },
+      { "action": "click", "selector": "#example" },
+      // Only include navigate/click/type/selectOption/press actions
+    ],
+    "stepsSummary": ["Step descriptions..."],
+    "finalUrl": "final URL"
+  }
   `.trim();
 
   const userPrompt = `
   Given URL: ${url}
 
-  Follow the FORM COMPLETION STRATEGY and ACTION SEQUENCE GUIDELINES from the system prompt.
-  1. Use browser tools like 'browser_snapshot()', 'browser_navigate(...)', 'browser_click(...)', 'browser_type(...)', 'browser_selectOption(...)', 'browser_press(...)'.
-  2. Use 'browser_wait({ms: ...})' only when needed for page stabilization (e.g., 100-200ms, or longer if required after navigation/submission).
-  3. Use 'browser_snapshot()' strategically to observe results and plan next steps, not necessarily after every single action.
-  4. Repeat until:
-     - Form is successfully submitted (detect success message/page), or
-     - No further meaningful actions are possible.
-  5. Record each action into your journey array and build stepsSummary.
-  6. When done, emit exactly the JSON schema with keys:
-    - siteDescription
-    - journey
-    - stepsSummary
-    - finalUrl
+  Navigate to the URL and complete the form. Use tools like browser_snapshot(), browser_navigate(), browser_click(), browser_type(), browser_selectOption(), and browser_press().
+  
+  CRITICAL SNAPSHOTS:
+  - ALWAYS call browser_snapshot() after navigation, clicks, or before filling forms
+  - Take frequent manual snapshots - don't rely on automatic snapshots
+  - After any error occurs, immediately take a new snapshot
+  - Remember to take a snapshot before and after form submission attempts
+  
+  IMPORTANT FOR ELEMENT TYPES:
+  - ALWAYS take a snapshot before interacting with elements
+  - Carefully check element types in snapshots before using them
+  - Use browser_type() ONLY for input, textarea, and contenteditable elements
+  - Use browser_click() for buttons, links, checkboxes, and radio buttons
+  - If you get "Element is not an <input>" errors, use browser_click() instead
+  
+  IMPORTANT FOR FORM VALIDATION:
+  - After entering data in a field, verify it contains the correct value
+  - After clicking "Next" or "Submit", always take a snapshot to check for validation errors
+  - If errors are found, check each field individually and re-enter data as needed
+  - For fields with errors, try clearing the field with browser_type(selector, ""), then re-enter the data
+  
+  Continue until form submission is successful or no further actions are possible.
+  
+  Return a JSON with siteDescription, journey, stepsSummary, and finalUrl.
   `.trim();
 
-  // Prepare messages array
-  const initialMessages: CoreMessage[] = [
+  // Initialize messages with only system and user messages
+  let messages: CoreMessage[] = [
     { role: "system", content: systemPrompt },
     { role: "user", content: userPrompt },
   ];
@@ -241,8 +262,12 @@ export async function runAIAgent(exploreRun: ExploreRun) {
     onStepFinishLogs: [], // Initialize array for onStepFinish logs
   };
 
-  let text, steps, toolCalls, toolResults, output, reasoning, sources, finishReason, usage;
-  let stepCounter = 0; // Initialize step counter
+  // Storage for manual accumulation of steps, tool calls, and results
+  const allSteps: any[] = [];
+  const allToolCalls: any[] = [];
+  const allToolResults: any[] = [];
+  let stepCounter = 0;
+  let finalOutput: any = null;
 
   // Timeout setup
   const controller = new AbortController();
@@ -252,116 +277,363 @@ export async function runAIAgent(exploreRun: ExploreRun) {
     controller.abort();
   }, timeoutDuration);
 
+  // Add constants for timing and snapshots
+  const AUTO_SNAPSHOT_DELAY_MS = 2000; // Delay before taking automatic snapshots
+  const AUTO_SNAPSHOT_ACTIONS = ["browser_click", "browser_type", "browser_navigate"]; // Actions that should trigger automatic snapshots
+
+  // Helper function for taking snapshots programmatically
+  async function takeAutoSnapshot(browserTools: Record<string, any>): Promise<any> {
+    console.log("Taking automatic snapshot after action...");
+    try {
+      // Add a small delay to ensure page has updated
+      await new Promise((resolve) => setTimeout(resolve, AUTO_SNAPSHOT_DELAY_MS));
+
+      // Log available tools to help with debugging
+      console.log("Available browser tools:", Object.keys(browserTools));
+
+      // Inspect each tool to find a valid snapshot tool
+      let snapshotTool = null;
+
+      // Check each tool for proper structure and handler
+      for (const [key, tool] of Object.entries(browserTools)) {
+        console.log(`Inspecting tool: ${key}`);
+
+        // Check if this might be a snapshot tool
+        const isSnapshotTool =
+          key === "browser_snapshot" ||
+          (tool.name && typeof tool.name === "string" && tool.name.includes("snapshot")) ||
+          key.includes("snapshot");
+
+        if (isSnapshotTool) {
+          console.log(`Found potential snapshot tool: ${key}`);
+          console.log(
+            `Tool structure:`,
+            JSON.stringify({
+              hasName: !!tool.name,
+              name: tool.name,
+              hasHandler: !!tool.handler,
+              handlerType: typeof tool.handler,
+            }),
+          );
+
+          // Validate that it has a proper handler function
+          if (tool.handler && typeof tool.handler === "function") {
+            snapshotTool = tool;
+            console.log(`Selected snapshot tool: ${key}`);
+            break;
+          }
+        }
+      }
+
+      if (!snapshotTool) {
+        // Try direct property access for standard MCP tools format
+        if (browserTools.browser_snapshot && typeof browserTools.browser_snapshot.handler === "function") {
+          console.log("Found snapshot tool via direct property access");
+          snapshotTool = browserTools.browser_snapshot;
+        }
+      }
+
+      if (!snapshotTool) {
+        console.warn("No valid snapshot tool found in available tools!");
+        return null;
+      }
+
+      console.log(`Using snapshot tool: ${snapshotTool.name || "unnamed"}`);
+      const snapshotResult = await snapshotTool.handler({});
+      return {
+        toolName: snapshotTool.name || "browser_snapshot",
+        args: {},
+        result: snapshotResult,
+      };
+    } catch (error) {
+      console.error("Error taking automatic snapshot:", error);
+      return null;
+    }
+  }
+
   try {
     // Define the model without the .withRetry() chain
     const model = openai("gpt-4.1-mini");
+    const maxIterations = 100; // Maximum number of iterations to prevent infinite loops
+    let iteration = 0;
+    let isDone = false;
 
-    const result = await generateText({
-      model, // Pass the base model instance
-      messages: initialMessages, // Use messages array
-      tools,
-      temperature: 0.1,
-      maxTokens: 20000,
-      maxSteps: 100, // Keeping maxSteps > 1 for now
-      frequencyPenalty: 0.2, // to avoid repeating same lines or phrases
-      experimental_continueSteps: true, // Enables only full tokens to be streamed out
-      experimental_output: Output.object({ schema: urlSchema }), // forces a json output
-      maxRetries: 5, // exponential back off
-      abortSignal: controller.signal, // Pass the abort signal
-      experimental_telemetry: { isEnabled: true }, // Enable OpenTelemetry
-      experimental_prepareStep: async (step) => {
-        // Boilerplate for experimental_prepareStep
-        console.log(`INFO: Preparing Step Number: ${step.stepNumber}`);
+    // Main conversation loop
+    while (iteration < maxIterations && !isDone) {
+      iteration++;
+      console.log(`Executing iteration ${iteration}...`);
 
-        // Access previous steps and messages:
-        const previousSteps = step.steps; // Array of StepResult objects from previous steps
-        // const allMessages = step.messages; // Full message history - Removed, not directly available in step object
-        const lastStep = previousSteps[previousSteps.length - 1];
+      // For each iteration, we'll use a managed context:
+      // 1. Always include system & user prompts
+      // 2. Add relevant recent messages (especially snapshot results)
+      // 3. Limit context size to prevent token overflow
 
-        // Example: Log tool calls from the last step (if any)
-        if (lastStep?.toolCalls && lastStep.toolCalls.length > 0) {
-          console.log("INFO: Tool calls in last step:", lastStep.toolCalls);
-        }
+      // Base messages always include system and user prompts
+      const baseMessages: CoreMessage[] = [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ];
 
-        // --- Decision Logic ---
-        // Based on previousSteps or stepNumber, decide if overrides are needed.
-        const overrideModel: any = undefined; // Or potentially openai('gpt-3.5-turbo') etc.
-        const overrideToolChoice: any = undefined; // Or { type: 'tool', toolName: '...' }, { type: 'required' }, etc.
-        const overrideActiveTools: string[] | undefined = undefined; // Or ['toolA', 'toolB']
+      // For the context management, use a simple approach
+      const recentMessageCount = 5; // Consider last 5 messages most important for context
+      const managedMessages: CoreMessage[] = [
+        ...baseMessages,
+        ...messages.slice(Math.max(0, messages.length - recentMessageCount)),
+      ];
 
-        // Example Condition: Switch to a specific tool after step 5
-        // if (step.stepNumber > 5) {
-        //   console.log("INFO: Forcing specific tool after step 5");
-        //   overrideToolChoice = { type: 'tool', toolName: 'browser_snapshot' };
-        //   overrideActiveTools = ['browser_snapshot', 'browser_wait'];
-        // }
+      // Use the appropriate messages for this iteration
+      const messagesForThisIteration = messages.length > 2 ? managedMessages : messages;
 
-        // --- Return Overrides ---
-        // Only include properties you want to override for the *next* step.
-        // Returning an empty object means no overrides.
-        const overrides: any = {};
-        if (overrideModel) overrides.model = overrideModel;
-        if (overrideToolChoice) overrides.toolChoice = overrideToolChoice;
-        if (overrideActiveTools) overrides.experimental_activeTools = overrideActiveTools;
+      const result = await generateText({
+        model,
+        messages: messagesForThisIteration,
+        tools,
+        temperature: 0.1,
+        maxTokens: 20000,
+        maxSteps: 1, // Use maxSteps: 1 as requested
+        frequencyPenalty: 0.2,
+        abortSignal: controller.signal,
+        experimental_telemetry: { isEnabled: true },
+        experimental_repairToolCall: async ({ toolCall }) => {
+          console.log(`INFO: [Repair Check] Checking tool call for ${toolCall.toolName}`);
+          const { args } = toolCall;
 
-        return overrides;
-      },
-      experimental_repairToolCall: async ({ toolCall }) => {
-        console.log(`INFO: [Repair Check] Checking tool call for ${toolCall.toolName}`);
-        const { args } = toolCall;
-
-        // Basic check: Log argument type and attempt JSON parse if string
-        if (typeof args === "string") {
-          try {
-            JSON.parse(args);
-            console.log(`INFO: [Repair Check] Args for ${toolCall.toolName} is a valid JSON string.`);
-          } catch (error: any) {
-            console.warn(
-              `WARN: [Repair Check] Args for ${toolCall.toolName} is a string but failed JSON parsing: ${error.message}`,
-            );
-            console.warn(`WARN: [Repair Check] Original string args:`, args);
-            // No repair attempted here, just logging.
+          // Basic check: Log argument type and attempt JSON parse if string
+          if (typeof args === "string") {
+            try {
+              JSON.parse(args);
+              console.log(`INFO: [Repair Check] Args for ${toolCall.toolName} is a valid JSON string.`);
+            } catch (error: any) {
+              console.warn(
+                `WARN: [Repair Check] Args for ${toolCall.toolName} is a string but failed JSON parsing: ${error.message}`,
+              );
+              console.warn(`WARN: [Repair Check] Original string args:`, args);
+            }
+          } else if (typeof args === "object" && args !== null) {
+            console.log(`INFO: [Repair Check] Args for ${toolCall.toolName} is an object.`);
+          } else {
+            console.log(`INFO: [Repair Check] Args for ${toolCall.toolName} is of type: ${typeof args}`);
           }
-        } else if (typeof args === "object" && args !== null) {
-          console.log(`INFO: [Repair Check] Args for ${toolCall.toolName} is an object.`);
-          // Further validation could happen here, but keeping it simple to avoid type issues.
-        } else {
-          console.log(`INFO: [Repair Check] Args for ${toolCall.toolName} is of type: ${typeof args}`);
+
+          return toolCall;
+        },
+        onStepFinish: async (stepResult) => {
+          stepCounter++;
+          // Capture step info for the log file
+          fullLog.onStepFinishLogs.push(`--- onStepFinish: Step ${stepCounter} ---`);
+          fullLog.onStepFinishLogs.push(`  Finish Reason: ${JSON.stringify(stepResult.finishReason)}`);
+          fullLog.onStepFinishLogs.push(`  Tool Calls: ${JSON.stringify(stepResult.toolCalls)}`);
+          fullLog.onStepFinishLogs.push(`  Tool Results: ${JSON.stringify(stepResult.toolResults)}`);
+          fullLog.onStepFinishLogs.push(`  Usage: ${JSON.stringify(stepResult.usage)}`);
+        },
+      });
+
+      // Accumulate result data
+      if (result.steps.length > 0) {
+        allSteps.push(result.steps[0]);
+      }
+
+      // Handle the assistant response
+      if (result.toolCalls && result.toolCalls.length > 0) {
+        // Add tool calls to our tracking
+        allToolCalls.push(...result.toolCalls);
+
+        // Debug logging for each tool call
+        console.log(`\n==== TOOL CALLS (Iteration ${iteration}) ====`);
+        result.toolCalls.forEach((tc, idx) => {
+          console.log(`  [${idx + 1}] Tool: ${tc.toolName}`);
+          console.log(`      Args: ${JSON.stringify(tc.args)}`);
+          console.log(`      CallId: ${tc.toolCallId || "unknown"}`);
+        });
+
+        // Create a new assistant message with the tool calls
+        const assistantMessage: CoreMessage = {
+          role: "assistant",
+          content: result.text || "",
+          tool_calls: result.toolCalls.map((tc) => ({
+            id: tc.toolCallId || `call-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+            type: "function",
+            function: {
+              name: tc.toolName,
+              arguments: typeof tc.args === "string" ? tc.args : JSON.stringify(tc.args),
+            },
+          })),
+        } as CoreMessage;
+
+        // Add the assistant message with tool calls
+        messages.push(assistantMessage);
+
+        // If we have tool results, create a new user message with the results
+        if (result.toolResults && result.toolResults.length > 0) {
+          allToolResults.push(...result.toolResults);
+
+          // Debug logging for each tool result
+          console.log(`\n==== TOOL RESULTS (Iteration ${iteration}) ====`);
+          result.toolResults.forEach((tr, idx) => {
+            const correspondingTool = idx < result.toolCalls.length ? result.toolCalls[idx].toolName : "auto-snapshot";
+            console.log(`  [${idx + 1}] For tool: ${correspondingTool}`);
+            const hasError = tr.result?.isError === true;
+            console.log(`      Status: ${hasError ? "ERROR" : "SUCCESS"}`);
+            if (hasError) {
+              console.log(`      Error: ${JSON.stringify(tr.result?.content)}`);
+            } else {
+              console.log(
+                `      Result: ${JSON.stringify(tr.result).substring(0, 150)}${JSON.stringify(tr.result).length > 150 ? "..." : ""}`,
+              );
+            }
+          });
+
+          // Check if we should take an automatic snapshot after this action
+          let snapshotTaken = false;
+          for (const toolCall of result.toolCalls) {
+            if (AUTO_SNAPSHOT_ACTIONS.includes(toolCall.toolName)) {
+              // Take an automatic snapshot after important actions
+              console.log(`Auto-snapshot triggered after ${toolCall.toolName} action`);
+              const snapshotResult = await takeAutoSnapshot(tools);
+
+              if (snapshotResult) {
+                snapshotTaken = true;
+                console.log("Auto-snapshot successful");
+                // Add snapshot result to our tracking
+                allToolResults.push(snapshotResult);
+                // Add snapshot information to the results we'll show the model
+                result.toolResults.push(snapshotResult);
+              } else {
+                console.log("Auto-snapshot failed, continuing without snapshot");
+                // Just log the failure but don't try to add a custom message to results
+                // This avoids type compatibility issues
+              }
+              break; // Only take one snapshot per iteration
+            }
+          }
+
+          // Format all tool results into a single user message with the combined information
+          const formattedResults = result.toolResults
+            .map((toolResult, index) => {
+              const isAutoSnapshot = index >= result.toolCalls.length; // Auto snapshots are appended after the original tool results
+
+              const toolName = isAutoSnapshot
+                ? "browser_snapshot (automatic)"
+                : result.toolCalls && index < result.toolCalls.length
+                  ? result.toolCalls[index].toolName
+                  : "unknown";
+
+              // Check if there's an error in the result
+              const hasError = toolResult.result?.isError === true;
+              const errorDetails =
+                hasError && toolResult.result?.content
+                  ? Array.isArray(toolResult.result.content)
+                    ? toolResult.result.content.map((c: any) => c.text || "").join("\n")
+                    : String(toolResult.result.content)
+                  : "";
+
+              // Enhance the feedback with error information
+              let feedback = `Tool: ${toolName}\n`;
+
+              if (isAutoSnapshot) {
+                feedback = `Tool: ${toolName}\nSTATUS: AUTO_SNAPSHOT\nThis snapshot was automatically taken after your previous action to show the current page state.\n`;
+              } else if (hasError) {
+                feedback += `STATUS: ERROR\n`;
+                feedback += `Error Details: ${errorDetails}\n`;
+
+                // Add guidance based on error type
+                if (errorDetails.includes("Element is not an <input>, <textarea>")) {
+                  if (toolName === "browser_type" && errorDetails.includes("radiogroup")) {
+                    feedback +=
+                      "GUIDANCE: For radiogroup elements, use browser_click on the specific radio option instead of browser_type.\n";
+                  } else if (toolName === "browser_type" && errorDetails.includes("button")) {
+                    feedback +=
+                      "GUIDANCE: This is a BUTTON element which doesn't accept text input. Use browser_click instead.\n";
+                  } else if (toolName === "browser_type") {
+                    feedback +=
+                      "GUIDANCE: The element doesn't support text input. Check the snapshot carefully and identify a proper input field, or use browser_click if this is a clickable element.\n";
+                    feedback +=
+                      "ACTION REQUIRED: Take a new snapshot first, then inspect the page structure to find the correct input fields.\n";
+                  } else {
+                    feedback +=
+                      "GUIDANCE: The element doesn't support text input. Consider using browser_click or check if it's the correct element.\n";
+                  }
+                } else if (errorDetails.includes("Execution context was destroyed")) {
+                  feedback += "GUIDANCE: The page navigated during the operation. Take a new snapshot and retry.\n";
+                }
+              } else {
+                feedback += "STATUS: SUCCESS\n";
+              }
+
+              feedback += `Result: ${JSON.stringify(toolResult)}\n\n`;
+              return feedback;
+            })
+            .join("");
+
+          // Add tool results as a user message
+          const userMessage: CoreMessage = {
+            role: "user",
+            content: formattedResults,
+          };
+
+          messages.push(userMessage);
         }
+      } else if (result.text) {
+        // Add the assistant's text response to messages (no tool calls)
+        messages.push({
+          role: "assistant",
+          content: result.text,
+        });
 
-        // This hook now primarily serves as a logging/observation point.
+        // Try to parse the final JSON output
+        try {
+          const possibleJson = JSON.parse(result.text);
+          if (
+            possibleJson.siteDescription &&
+            Array.isArray(possibleJson.journey) &&
+            Array.isArray(possibleJson.stepsSummary) &&
+            possibleJson.finalUrl
+          ) {
+            console.log("Found final JSON output");
+            finalOutput = possibleJson;
+            isDone = true;
+          }
+        } catch (e) {
+          // Not valid JSON, continue the conversation
+          console.log("Response is not final JSON output, continuing...");
+        }
+      }
 
-        // Return the original tool call, letting the tool execution handle potential errors.
-        return toolCall;
-      },
-      onStepFinish: async (stepResult) => {
-        stepCounter++; // Increment step counter
-        // Capture step info for the log file instead of console
-        fullLog.onStepFinishLogs.push(`--- onStepFinish: Step ${stepCounter} ---`);
-        fullLog.onStepFinishLogs.push(`  Finish Reason: ${JSON.stringify(stepResult.finishReason)}`);
-        fullLog.onStepFinishLogs.push(`  Tool Calls: ${JSON.stringify(stepResult.toolCalls)}`);
-        fullLog.onStepFinishLogs.push(`  Tool Results: ${JSON.stringify(stepResult.toolResults)}`);
-        fullLog.onStepFinishLogs.push(`  Usage: ${JSON.stringify(stepResult.usage)}`);
-      },
-    });
+      // Check if we should stop based on finishReason
+      if (result.finishReason) {
+        // Check if finishReason is a string or an object with a type property
+        const reason =
+          typeof result.finishReason === "string"
+            ? result.finishReason
+            : (result.finishReason as any).type || result.finishReason;
 
-    // Add to log collection
-    fullLog.rawResult = result;
+        if (reason === "stop") {
+          console.log("Detected finish reason 'stop', ending conversation loop");
+          isDone = true;
+        }
+      }
 
-    // Destructure the properties we need
-    ({
-      text,
-      steps,
-      toolCalls,
-      toolResults,
-      experimental_output: output,
-      reasoning,
-      sources,
-      finishReason,
-      usage,
-    } = result);
+      // Log current iteration details
+      console.log(
+        `Iteration ${iteration} completed. Tool calls: ${result.toolCalls?.length || 0}, Has text: ${!!result.text}`,
+      );
+    }
 
-    // Log additional information from generateText results
+    // Consolidate the step results into the format expected by the rest of the code
+    fullLog.rawResult = {
+      text: finalOutput ? JSON.stringify(finalOutput) : "",
+      steps: allSteps,
+      toolCalls: allToolCalls,
+      toolResults: allToolResults,
+      experimental_output: finalOutput,
+      reasoning: "Manually accumulated through multiple steps",
+      finishReason: { type: "stop", reason: "Conversation completed" },
+    };
+
+    // Destructure the properties we need for logging and return
+    const { text, reasoning, sources, finishReason, usage } = fullLog.rawResult;
+
+    // Log additional information
     console.log("=== Model Reasoning ===");
     console.log(reasoning || "No reasoning provided");
 
@@ -396,7 +668,7 @@ export async function runAIAgent(exploreRun: ExploreRun) {
 
   // Add steps data to log collection
   fullLog.stepDetails = [];
-  steps.forEach((step, i) => {
+  allSteps.forEach((step, i) => {
     // Capture final step details for the log file
     fullLog.onStepFinishLogs.push(`--- Final Loop: Step ${i + 1} (${step.stepType}) ---`);
     fullLog.onStepFinishLogs.push(`  Full Details: ${JSON.stringify(step)}`);
@@ -412,14 +684,29 @@ export async function runAIAgent(exploreRun: ExploreRun) {
     });
   });
 
+  // Get the final structured output
+  const output = fullLog.rawResult.experimental_output;
+
   // Log the raw output for debugging
-  console.log("generateText returned (raw):", JSON.stringify({ text, toolCalls, toolResults, output }, null, 2));
+  console.log(
+    "generateText returned (raw):",
+    JSON.stringify(
+      {
+        text: fullLog.rawResult.text,
+        toolCalls: allToolCalls,
+        toolResults: allToolResults,
+        output,
+      },
+      null,
+      2,
+    ),
+  );
 
   // Add structured outputs to log collection
   fullLog.structuredOutput = {
-    text,
-    toolCalls,
-    toolResults,
+    text: fullLog.rawResult.text,
+    toolCalls: allToolCalls,
+    toolResults: allToolResults,
     output,
   };
 
@@ -443,7 +730,7 @@ export async function runAIAgent(exploreRun: ExploreRun) {
   const siteDescription = output?.siteDescription;
   const stepsSummary = output?.stepsSummary;
 
-  // Return all the required data instead of just the formatted URL
+  // Return all the required data
   const returnObject = {
     finalUrl: finalUrl || null,
     siteDescription: siteDescription || null,
